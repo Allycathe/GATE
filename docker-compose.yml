@@ -1,0 +1,36 @@
+
+services:
+  db:
+    image: postgres:15-alpine # Usamos alpine por ser más ligera
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # Persistencia de datos
+
+  api:
+    build: ./backend  # <-- Aquí le decimos que el contexto es la carpeta /backend
+    container_name: node_backend
+    restart: always
+    ports:
+      - "${PORT}:${PORT}"
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+    # Esto ayuda a que los cambios en tu código se vean reflejados sin reiniciar el contenedor
+    volumes:
+      - ./backend:/usr/src/app
+      - /usr/src/app/node_modules # Evita que los node_modules locales sobrescriban los del contenedor
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
