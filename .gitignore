@@ -6,3 +6,31 @@ backend/node_modules/
 *.log
 
 .DS_Store
+
+# Archivos de compilación (donde falló el CMake)
+build/
+
+# Herramientas de Dart/Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache
+.pub/
+
+# Específicos de Linux (ya que estás en Pop!_OS)
+linux/flutter/ephemeral/
+
+# Archivos de configuración de IDEs
+.vscode/
+.idea/
+*.iml
+
+
+# Datos persistentes de la base de datos (¡No los subas!)
+# Esto evita que tu base de datos local se suba al repo
+postgres_data/
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
