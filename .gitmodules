@@ -1,0 +1,6 @@
+[submodule "backend"]
+	path = backend
+	url = git@github.com:Allycathe/IS-backend.git
+[submodule "gate"]
+	path = gate
+	url = git@github.com:Allycathe/IS-mobile.git

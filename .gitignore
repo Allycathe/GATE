@@ -17,6 +17,7 @@ build/
 .packages
 .pub-cache
 .pub/
+build/
 
 # Específicos de Linux (ya que estás en Pop!_OS)
 linux/flutter/ephemeral/
