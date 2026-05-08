@@ -1,4 +1,4 @@
-// lib/map_1.dart
+// lib/map.dart
 import 'package:flutter/material.dart';
 import 'mapa_screen.dart';
 
