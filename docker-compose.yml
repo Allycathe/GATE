@@ -1,32 +1,60 @@
-
 services:
   db:
-    image: postgres:15-alpine # Usamos alpine por ser más ligera
+    image: postgres:15-alpine
     container_name: postgres_db
     restart: always
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
-    ports:
-      - "${DB_PORT}:5432"
+    expose:
+      - "5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data # Persistencia de datos
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
 
   api:
-    build: ./backend  # <-- Aquí le decimos que el contexto es la carpeta /backend
+    build: ./backend
     container_name: node_backend
     restart: always
     ports:
-      - "${PORT}:${PORT}"
+    - "${PORT}:${PORT}"
     depends_on:
       - db
     environment:
       DATABASE_URL: postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
-    # Esto ayuda a que los cambios en tu código se vean reflejados sin reiniciar el contenedor
+      PORT: ${PORT}
     volumes:
       - ./backend:/usr/src/app
-      - /usr/src/app/node_modules # Evita que los node_modules locales sobrescriban los del contenedor
+      - /usr/src/app/node_modules
+    networks:
+      - app-network
+
+  ddns-updater:
+    image: qmcgaw/ddns-updater
+    container_name: ddns-updater
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ddns-updater/data:/updater/data
+    networks:
+      - app-network
+
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: nginx-proxy-manager
+    restart: always
+    ports:
+      - "80:80"        # HTTP
+      - "443:443"      # HTTPS
+      - "81:81"        # interfaz web de administración
+    volumes:
+      - ./npm/data:/data
+      - ./npm/letsencrypt:/etc/letsencrypt
+    networks:
+      - app-network
 
 networks:
   app-network:

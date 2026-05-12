@@ -1,4 +1,10 @@
+
+
+lib/config.dart
 .env
+ddns-updater/data/config.json
+certbot/
+npm/
 
 node_modules/
 backend/node_modules/

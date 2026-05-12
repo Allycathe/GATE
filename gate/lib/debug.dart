@@ -8,31 +8,25 @@ class debug extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text("GATE")),
       body: Center(
-        child: 
-          Column( 
-            children: [
-              const Text("DEBUG PARA VER LAS DEMAS VISTAS"),
-              
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => login()));
-                },
-                child: const Text("Ver Login")),
-              const Text("Toi dudando si hay q hacer registro"),
-              ElevatedButton(
-                onPressed: () {
+        child: Column(
+          children: [
+            const Text("DEBUG PARA VER LAS DEMAS VISTAS"),
 
-                },
-                
-                child: const Text("Ver Registro")),
-              ElevatedButton(
-                onPressed: () {
-
-                },
-                child: const Text("Ver Algo")),
-            ],),
-      )
-
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => login()),
+                );
+              },
+              child: const Text("Ver Login"),
+            ),
+            const Text("Toi dudando si hay q hacer registro"),
+            ElevatedButton(onPressed: () {}, child: const Text("Ver Registro")),
+            ElevatedButton(onPressed: () {}, child: const Text("Ver Algo")),
+          ],
+        ),
+      ),
     );
   }
 }
