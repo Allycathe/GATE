@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'login.dart';
 
 class debug extends StatelessWidget {
+  const debug({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -11,7 +13,6 @@ class debug extends StatelessWidget {
         child: Column(
           children: [
             const Text("DEBUG PARA VER LAS DEMAS VISTAS"),
-
             ElevatedButton(
               onPressed: () {
                 Navigator.push(

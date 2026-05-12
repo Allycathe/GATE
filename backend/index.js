@@ -1,22 +1,26 @@
 const express = require('express');
-const { Pool } = require('pg');
+const morgan = require('morgan');
+const { pool, comprobarConexion } = require('./src/db');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
+app.use(express.json());
+app.use(morgan('dev'));
+
+// Test de conexión utilizando la lógica extraída
+app.get('/db-test', async (req, res) => {
+  try {
+    const time = await comprobarConexion();
+    res.json({ status: 'Conectado', time });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.use(express.json());
+app.use('/usuarios', require('./src/routes/usuarios')(pool));
+app.use('/auth', require('./src/routes/auth')(pool));
 
-// Rutas
-app.use('/usuarios', require('./routes/usuarios')(pool));
-app.use('/mecheros', require('./routes/mecheros')(pool));
-app.use('/reportes', require('./routes/reportes')(pool));
-app.use('/supermercados', require('./routes/supermercados')(pool));
-app.use('/auth', require('./routes/auth')(pool));
-
-app.listen(port, () => {
+app.listen(port, '0.0.0.0', () => {
   console.log(`Servidor corriendo en puerto ${port}`);
 });

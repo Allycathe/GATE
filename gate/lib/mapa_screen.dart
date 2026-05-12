@@ -44,8 +44,9 @@ class _PantallaMapaState extends State<PantallaMapa> {
   Future<void> _obtenerUbicacion() async {
     try {
       bool servicioActivo = await Geolocator.isLocationServiceEnabled();
-      if (!servicioActivo)
+      if (!servicioActivo) {
         return; // verifica que el GPS está encendido, si está apagado, sale el método return y usa santiago, SI QUEREMOS QUE SI O SI ESTE ACTIVADO, ACÁ SE MUESTRA
+      }
 
       LocationPermission permiso = await Geolocator
           .checkPermission(); // verifica si el usuario dio permiso para acceder a su ubicación, si no dio permiso, se lo solicita, si el usuario sigue negando el permiso, sale el método return y usa santiago
@@ -183,13 +184,13 @@ class _PantallaMapaState extends State<PantallaMapa> {
 
                 // Capa 2: Marcadores de supermercados
                 MarkerLayer(
-                  markers: _supermercados.map((super_mercado) {
+                  markers: _supermercados.map((superMercado) {
                     return Marker(
-                      point: LatLng(super_mercado['lat'], super_mercado['lng']),
+                      point: LatLng(superMercado['lat'], superMercado['lng']),
                       width: 60,
                       height: 60,
                       child: GestureDetector(
-                        onTap: () => _mostrarReportes(super_mercado['nombre']),
+                        onTap: () => _mostrarReportes(superMercado['nombre']),
                         child: Column(
                           children: [
                             const Icon(
@@ -202,7 +203,7 @@ class _PantallaMapaState extends State<PantallaMapa> {
                                   horizontal: 4, vertical: 2),
                               color: Colors.white,
                               child: Text(
-                                super_mercado['nombre'],
+                                superMercado['nombre'],
                                 style: const TextStyle(fontSize: 9),
                                 overflow: TextOverflow.ellipsis,
                               ),
