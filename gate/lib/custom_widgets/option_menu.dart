@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:gate/pages/reports.dart';
 import 'package:gate/pages/profile.dart';
 import '../config.dart';
-import '../pages/map.dart';
 
 class OptionContainer extends StatelessWidget {
 
