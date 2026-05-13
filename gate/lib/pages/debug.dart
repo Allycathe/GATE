@@ -17,7 +17,7 @@ class debug extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => login()),
+                  MaterialPageRoute(builder: (context) => loginPage()),
                 );
               },
               child: const Text("Ver Login"),

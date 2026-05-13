@@ -1,32 +1,47 @@
-
 services:
   db:
-    image: postgres:15-alpine # Usamos alpine por ser más ligera
+    image: postgres:15-alpine
     container_name: postgres_db
     restart: always
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
-    ports:
-      - "${DB_PORT}:5432"
+    expose:
+      - "5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data # Persistencia de datos
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
 
   api:
-    build: ./backend  # <-- Aquí le decimos que el contexto es la carpeta /backend
+    build: ./backend
     container_name: node_backend
     restart: always
     ports:
-      - "${PORT}:${PORT}"
+    - "${PORT}:${PORT}"
     depends_on:
       - db
     environment:
       DATABASE_URL: postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
-    # Esto ayuda a que los cambios en tu código se vean reflejados sin reiniciar el contenedor
+      PORT: ${PORT}
     volumes:
       - ./backend:/usr/src/app
-      - /usr/src/app/node_modules # Evita que los node_modules locales sobrescriban los del contenedor
+      - /usr/src/app/node_modules
+    networks:
+      - app-network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    restart: always
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+    networks:
+      - app-network
 
 networks:
   app-network:
