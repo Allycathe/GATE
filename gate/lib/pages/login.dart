@@ -47,8 +47,8 @@ class LoginPage extends StatelessWidget {
                               Column( // Textos
                                 children: [
                                   const SizedBox(height: 10),
-                                  const Text("Iniciar Sesion",
-                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 50)),
+                                  const Text("Bienvenido",
+                                    style: titleTextStyle),
                                   const SizedBox(height: 30),
                                   // ** Formulario
                                   Form(
@@ -69,8 +69,8 @@ class LoginPage extends StatelessWidget {
                                             }
                                             else {
                                               email = value;
-                                              // A lo mejor me falta un return value o algo ****************
                                             }
+                                            return null;
                                           }
                                         ),
                                         TextFormField( // password form
@@ -85,15 +85,15 @@ class LoginPage extends StatelessWidget {
                                             else {
                                               pw = value;
                                             }
+                                            return null;
                                           }
                                         ),
                                       ])
                                     ),
                                   const SizedBox(height: 40),
-                                  ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: interfaceColor,
-                                      foregroundColor: Colors.white,
+                                  FilledButton(
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: buttonColor,
                                       padding: const EdgeInsets.all(10),
                                     ),
                                     onPressed: () { submit(); },
