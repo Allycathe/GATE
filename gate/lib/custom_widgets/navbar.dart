@@ -23,7 +23,7 @@ class CustomAppBar extends StatelessWidget
                       fit: BoxFit.contain,
                     );
                   },
-        ) , centerTitle: true, backgroundColor: interfaceColor,
+        ) , centerTitle: true, backgroundColor: Colors.white,
     );
   }
 
