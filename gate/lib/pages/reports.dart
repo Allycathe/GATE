@@ -17,43 +17,48 @@ class ReportsPage extends StatelessWidget {
       body: 
         Center(
           child: Column(
-            children: [
-              Container(color: interfaceColor, width: double.infinity, 
-                        child: 
-                          Center(
-                            child: Text("Reportes recientes en la zona", textAlign: TextAlign.center ,style: titleTextStyle.copyWith(color: Colors.white)),)),
-                      
-              Expanded(child: SingleChildScrollView(child: 
-                Padding(
-                  padding: EdgeInsets.all(20.0),
-                  child: Column( children: [
-                      FilledButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => map()),
-                          );
-                        }, 
-                        style: FilledButton.styleFrom(backgroundColor: buttonColor), child: Text("Ver mapa"),),
-                      SizedBox(height: 20),
+            children: [    
+              Expanded(child: SingleChildScrollView(
+                child: 
+                  Column(children: [
+                    Center(
+                      child: Text("Reportes recientes",style: titleTextStyle)),
+                          
+                    Padding(
+                      padding: EdgeInsets.all(20.0),
+                      child: Column( children: [
+                          FilledButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => map()),
+                              );
+                            }, 
+                            style: FilledButton.styleFrom(backgroundColor: buttonColor, padding: EdgeInsets.all(16)),
+                             child: Text("Ver mapa"),),
+                          SizedBox(height: 20),
 
-                      for (int i = 1; i< viewReports+1 ; i++) // REPORTES
-                        Container(decoration: BoxDecoration(border: Border.all(color: Colors.black) ), child: 
-                          Padding(padding: EdgeInsets.all(8.0), 
-                            child: Row(children: [
-                              Column(children: [
-                                Text("Reporte $i Hardcodeado", style: TextStyle(fontWeight: FontWeight.bold),),
-                                Text("Suspect: Martin qewo"),
-                                Text("Ubicacion: uwu arigato maid club")
-                              ],),
-                              Expanded(child: Text(" ")), // Para tirar la imagen a la derecha
-                              Image.asset('assets/profile_pic.jpg',height: 100, width: 100,
-                    fit: BoxFit.cover,),
-                            ],)
-                        ))
-                    ],
-                  ),)
-                )
+                          for (int i = 1; i< viewReports+1 ; i++) // REPORTES
+                            Container(decoration: BoxDecoration(border: Border.all(color: Colors.black) ), child: 
+                              Padding(padding: EdgeInsets.all(8.0), 
+                                child: Row(children: [
+                                  Expanded(
+                                    child: 
+                                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                        Text("ID del reporte: $i", style: TextStyle(fontWeight: FontWeight.bold)) ,
+                                        Text("Nombre del bandido: Martin WEKO"),
+                                        Text("Ubicacion del atraco: Kawaii Bakery Maid Café, Santiago, Chile.")
+                                      ])
+                                    ),
+                                  //Expanded(child: Text(" ")), // Para tirar la imagen a la derecha
+                                  Image.asset('assets/profile_pic.jpg',height: 100, width: 100,
+                                    fit: BoxFit.cover,),
+                                ])
+                            ))
+                        ],
+                      ),)
+                ])
+              )
             ),
 
             //const Expanded(child: Text(" ")),

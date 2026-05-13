@@ -1,7 +1,7 @@
 // lib/debug.dart
 import 'package:flutter/material.dart';
 
-import '../config.dart';
+//import '../config.dart';
 import '../custom_widgets/navbar.dart';
 
 
