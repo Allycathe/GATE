@@ -6,7 +6,6 @@ import 'config.dart';
 import 'custom_widgets/navbar.dart';
 import 'custom_widgets/option_menu.dart';
 import 'pages/debug.dart';
-import 'pages/map.dart';
 
 // Variables: (Estaticas por el moment)
 const nombre = "Alonso";
