@@ -62,7 +62,7 @@ class ProfilePage extends StatelessWidget {
               onPressed: () {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => debug()));
               }, // Por el mometn no hace nada el boton
-              style: FilledButton.styleFrom(backgroundColor: buttonColor),
+              style: FilledButton.styleFrom(backgroundColor: buttonColor, padding: EdgeInsets.all(16)),
               child: const Text("Debug")), 
 
             //const SizedBox(height: 100), // Espacio entre el texto y los botones inferiores
