@@ -4,9 +4,6 @@ import 'package:flutter/material.dart';
 import '../config.dart';
 import '../custom_widgets/navbar.dart';
 
-//const interfaceColor = Color.fromARGB(255, 102, 102, 255); // Default interfaceColor.fromARGB(255, 102, 102, 255)
-//const textOptionColor = Color.fromARGB(255, 102, 102, 255); // Default textOptionColor.fromARGB(255, 102, 102, 255)
-
 // Default settings
 const emptyTextForm = "Campo vacio";
 const exampleEmail = "example@gmail.com";
@@ -17,15 +14,16 @@ var email = "";
 var pw = "";
 
 class login extends StatelessWidget {
+  const login({super.key});
+
   @override
   Widget build(BuildContext context) {
     final formkey = GlobalKey<FormState>(); // Form key
 
     void submit() {
       if (formkey.currentState!.validate()) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Procesando data"))
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text("Procesando data")));
       }
     }
 

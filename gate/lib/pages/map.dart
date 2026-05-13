@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'mapa_screen.dart';
 
 class map extends StatelessWidget {
+  const map({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
