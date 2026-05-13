@@ -1,6 +1,13 @@
 // lib/debug.dart
 import 'package:flutter/material.dart';
+import 'package:gate/custom_widgets/navbar.dart';
+import 'package:gate/custom_widgets/option_menu.dart';
+
+import '/config.dart';
+
+// Por mientras q es debug
 import 'login.dart';
+import 'error.dart';
 
 class debug extends StatelessWidget {
   const debug({super.key});
@@ -8,7 +15,7 @@ class debug extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("GATE")),
+      appBar: CustomAppBar(),
       body: Center(
         child: Column(
           children: [
@@ -22,9 +29,28 @@ class debug extends StatelessWidget {
               },
               child: const Text("Ver Login"),
             ),
-            const Text("Toi dudando si hay q hacer registro"),
-            ElevatedButton(onPressed: () {}, child: const Text("Ver Registro")),
-            ElevatedButton(onPressed: () {}, child: const Text("Ver Algo")),
+
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ErrorPage()),
+                );
+              },
+              child: const Text("Ver pagina de error"),
+            ),
+
+            FilledButton(onPressed: () {},  
+              style: FilledButton.styleFrom(backgroundColor: interfaceColor), child: const Text("Cambiar foto de perfil")
+            ),
+
+            SizedBox(height: 20,),
+
+            FilledButton(onPressed: () {},  
+              style: FilledButton.styleFrom(backgroundColor: buttonColor), child: const Text("Cerrar sesion")
+            ),
+            const Expanded(child: Text(" ")),
+            const OptionContainer()
           ],
         ),
       ),

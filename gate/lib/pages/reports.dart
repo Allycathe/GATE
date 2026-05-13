@@ -21,10 +21,8 @@ class ReportsPage extends StatelessWidget {
               Expanded(child: SingleChildScrollView(
                 child: 
                   Column(children: [
-                    Container(color: interfaceColor, width: double.infinity, 
-                            child: 
-                              Center(
-                                child: Text("Reportes recientes en la zona", textAlign: TextAlign.center ,style: titleTextStyle.copyWith(color: Colors.white)),)),
+                    Center(
+                      child: Text("Reportes recientes",style: titleTextStyle)),
                           
                     Padding(
                       padding: EdgeInsets.all(20.0),

@@ -105,10 +105,7 @@ class _ReportPageState extends State<NewReport>{
                 children: [
                     const Text(
                         "Nuevo reporte",
-                        style: TextStyle(
-                            fontSize: 30,
-                            fontWeight: FontWeight.bold,
-                        ),
+                        style: titleTextStyle,
                     ),
 
                     const SizedBox(height: 20),
@@ -314,6 +311,7 @@ class _ReportPageState extends State<NewReport>{
                                 ),
                             );
                         }),
+                        
                 ],
             ),
         );
