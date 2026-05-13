@@ -13,8 +13,8 @@ const examplePassword = "你好世界";
 var email = "";
 var pw = "";
 
-class loginPage extends StatelessWidget {
-  const loginPage({super.key});
+class LoginPage extends StatelessWidget {
+  const LoginPage({super.key});
 
   @override
   Widget build(BuildContext context) {
