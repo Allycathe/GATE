@@ -63,11 +63,9 @@ class PantallaInicio extends StatelessWidget {
             ),
 
             const SizedBox(height: 40),
+            const Text("Bienvenido", style: titleTextStyle),
             const Text("$nombre $apellido", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 30,)),
-            const SizedBox(height: 30),
-            const Text("Rol: $rol", style: TextStyle(fontSize: 20)),
-            const SizedBox(height: 10),
-            const Text("Local: $local", style: TextStyle(fontSize: 20),),
+
             const SizedBox(height: 20,),
             ElevatedButton(
               onPressed: () {
