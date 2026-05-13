@@ -94,7 +94,7 @@ class LoginPage extends StatelessWidget {
                                   FilledButton(
                                     style: FilledButton.styleFrom(
                                       backgroundColor: buttonColor,
-                                      padding: const EdgeInsets.all(10),
+                                      padding: const EdgeInsets.all(16),
                                     ),
                                     onPressed: () { submit(); },
                                     child: const Text("Ingresar al sistema")
