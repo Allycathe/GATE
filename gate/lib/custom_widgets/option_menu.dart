@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gate/pages/new_report.dart';
 
 import 'package:gate/pages/reports.dart';
 import 'package:gate/pages/profile.dart';
@@ -36,7 +37,11 @@ class OptionContainer extends StatelessWidget {
                             child: Center(
                               child: 
                                 ElevatedButton(
-                                  onPressed: () {},
+                                  onPressed:(){
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder:(context)=>const NewReport()),);
+                                  },
                                   child: const Text("+", style: TextStyle(color: textOptionColor),)),
                             ),
                           ),
