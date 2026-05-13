@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:gate/pages/reports.dart';
+import 'package:gate/pages/profile.dart';
 import '../config.dart';
 import '../pages/map.dart';
 
@@ -9,7 +11,6 @@ class OptionContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return Container(
       color: interfaceColor,
               child: 
@@ -22,9 +23,14 @@ class OptionContainer extends StatelessWidget {
                           Expanded(
                             child: Center(
                               child: 
-                                ElevatedButton(  // Sin pagina aun
-                                  onPressed: () {},
-                                  child: const Text("Ver reportes", style: TextStyle(color: textOptionColor),)),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => ReportsPage()),
+                                    );
+                                  },
+                                  child: const Text("Reportes", style: TextStyle(color: textOptionColor),)),
                             ),
                           ),
                           Expanded( // Sin pagina aun
@@ -41,13 +47,12 @@ class OptionContainer extends StatelessWidget {
                               child: 
                                 ElevatedButton(  // Pagina del mapa
                                   onPressed: () {
-                                    // Navegar a map_1.dart
                                     Navigator.push(
                                       context,
-                                      MaterialPageRoute(builder: (context) => map()),
+                                      MaterialPageRoute(builder: (context) => ProfilePage()),
                                     );
                                 },      
-                                child: const Text("Ver mapa", style: TextStyle(color: textOptionColor))
+                                child: const Text("Perfil", style: TextStyle(color: textOptionColor))
                                 )
                             )
                           )
