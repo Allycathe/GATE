@@ -12,14 +12,9 @@ const nombre = "Alonso";
 const apellido = "Iturrianda";
 
 const rol = "Guardia en la isla Epstein";
-const local = "Unimarc";
+const local = "Unimarc Av. San Martín 0675";
 
 const isAdmin = false;
-
-var profileDefaultImage = const NetworkImage("https://i.pinimg.com/474x/c6/a9/a1/c6a9a1c3ec3b086dda8de521ffc46f61.jpg"); // Img si no se encuentra la real
-var profileImage = const AssetImage('assets/profile_pic.jpg');
-
-
 
 // ** Main
 void main() => runApp(const MiAppMapa());
@@ -42,8 +37,8 @@ class PantallaInicio extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const CustomAppBar(),
-      body: SingleChildScrollView( 
-        child: Center( 
+      body: 
+        Center( 
           child: Column(
             children: [
             const SizedBox(height: 50),
@@ -81,10 +76,9 @@ class PantallaInicio extends StatelessWidget {
               style: ElevatedButton.styleFrom(backgroundColor: interfaceColor, foregroundColor: Colors.white,),
               child: const Text("Aca va el Perfil pero lo uso cmo debug por mientras")), 
 
-            const SizedBox(height: 100), // Espacio entre el texto y los botones inferiores
-            
+            const Expanded(child: Text(" ")),
             const OptionContainer()
           ]),
-      )));
+      ));
   }
 }

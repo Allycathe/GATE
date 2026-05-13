@@ -9,7 +9,11 @@ const String baseUrl = 'https://gate.blade.dedyn.io';
 // Default interfaceColor.fromARGB(255, 102, 102, 255)
 // Default textOptionColor.fromARGB(255, 102, 102, 255)
 
+
+const titleTextStyle = TextStyle(fontWeight: FontWeight.bold, fontSize: 40);
 const navbarColor = Color.fromARGB(255, 255, 255, 255);
 const interfaceColor = Color.fromARGB(255, 255, 48, 58);
 const textOptionColor = Color.fromARGB(255, 255, 57, 57);
 
+// Para filled buttons -> los elevated buttons solo los use para las opciones de menu
+const buttonColor = Color.fromARGB(255, 0, 0, 0);
