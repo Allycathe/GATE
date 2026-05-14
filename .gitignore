@@ -42,3 +42,12 @@ postgres_data/
 .DS_Store
 Thumbs.db
 flutter/
+
+
+# Flutter generated files
+**/android/local.properties
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/macos/Flutter/ephemeral/
+**/linux/flutter/ephemeral/
+**/windows/flutter/ephemeral/
