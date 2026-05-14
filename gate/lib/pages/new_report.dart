@@ -3,9 +3,19 @@ import '/custom_widgets/navbar.dart';
 import '../config.dart';
 import '../services/report_service.dart';
 
+String rol = "";
+
+void definirRol(bool isAdmin){
+  if (isAdmin){
+    rol = "Encargado";
+  }
+  else {
+    rol = "Guardia";
+  }
+}
+
 class NewReport extends StatefulWidget{
     const NewReport({super.key});
-
     @override
     State<NewReport> createState(){
         return _ReportPageState();
@@ -18,7 +28,7 @@ class _ReportPageState extends State<NewReport>{
 
     final String nombreUsuario = "Alonso Iturrianda";
     final String supermercadoUsuario = "Unimarc";
-    final String rolUsuario = "Guardia";
+    final String rolUsuario = "Guardia"; // hardcodeado por mientras
 
     String descripcion = "";
     bool noExisteNombre = false;
@@ -79,10 +89,10 @@ Future<void> guardarReporte() async {
 
         final nuevoReporte = {
             "persona": nombreFinal,
-            "supermercado": supermercadoUsuario,
-            "reportadoPor": nombreUsuario,
+            "supermercado": userSupermarketId.toString(),
+            "reportadoPor": userName.toString(),
             "fecha": obtenerFechaActual(),
-            "descripcion": descripcion,
+            "descripcion": descripcion.toString(),
         };
 
         setState((){
@@ -136,9 +146,9 @@ Future<void> guardarReporte() async {
                             borderRadius: BorderRadius.circular(14),
                         ),
                         child: Text(
-                            "Usuario: $nombreUsuario\n"
-                            "Sucursal: $supermercadoUsuario\n"
-                            "Rol: $rolUsuario",
+                            "Usuario: $userName\n"
+                            "Sucursal: $userSupermarketId\n"
+                            "Rol: $rolUsuario", // Debug
                             style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,
@@ -324,7 +334,7 @@ Future<void> guardarReporte() async {
                                         "Sucursal: ${reporte["supermercado"]}\n"
                                         "Reportado por: ${reporte["reportadoPor"]}\n"
                                         "Fecha: ${reporte["fecha"]}\n"
-                                        "${reporte["descripcion"]}",
+                                        "Descripción: ${reporte["descripcion"]}",
                                     ),
                                 ),
                             );

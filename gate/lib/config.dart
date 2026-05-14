@@ -17,6 +17,8 @@ String userEmail = "";
 String userName = "";
 String userLastName = "";
 bool userIsAdmin = false;
+
+
 // Configuraciones de interfaz
 
 // Default interfaceColor.fromARGB(255, 102, 102, 255)
