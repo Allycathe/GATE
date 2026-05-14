@@ -9,6 +9,36 @@ import '/config.dart';
 import 'login.dart';
 import 'error.dart';
 
+void logout(BuildContext context){
+
+  // Limpiar sesión
+  userToken = "";
+
+  userId = 0;
+
+  userEmail = "";
+
+  userName = "";
+
+  userLastName = "";
+
+  userIsAdmin = false;
+
+  userSupermarketId = 0;
+
+  // Volver login
+  Navigator.pushAndRemoveUntil(
+
+    context,
+
+    MaterialPageRoute(
+      builder: (context) => const LoginPage(),
+    ),
+
+    (route) => false,
+  );
+}
+
 class debug extends StatelessWidget {
   const debug({super.key});
 
@@ -46,9 +76,17 @@ class debug extends StatelessWidget {
 
             SizedBox(height: 20,),
 
-            FilledButton(onPressed: () {},  
-              style: FilledButton.styleFrom(backgroundColor: buttonColor), child: const Text("Cerrar sesion")
+            FilledButton(
+              onPressed: () {
+                logout(context);
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: buttonColor,
+              ),
+              child: const Text("Cerrar sesión"),
             ),
+
+            
             const Expanded(child: Text(" ")),
             const OptionContainer()
           ],

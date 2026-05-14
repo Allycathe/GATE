@@ -8,8 +8,6 @@ import 'custom_widgets/option_menu.dart';
 import 'pages/debug.dart';
 
 // Variables: (Estaticas por el moment)
-const nombre = "Alonso";
-const apellido = "Iturrianda";
 
 const rol = "Guardia en la isla Epstein";
 const local = "Unimarc Av. San Martín 0675";
@@ -64,7 +62,7 @@ class PantallaInicio extends StatelessWidget {
 
             const SizedBox(height: 40),
             const Text("Bienvenido", style: titleTextStyle),
-            const Text("$nombre $apellido", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 30,)),
+            Text("$userName $userLastName", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 30,)),
 
             const SizedBox(height: 20,),
             ElevatedButton(

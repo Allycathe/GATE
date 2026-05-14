@@ -7,22 +7,24 @@ import '../custom_widgets/navbar.dart';
 import '/pages/debug.dart';
 
 // Variables: (Estaticas por el moment)
-const id = "153";
+String rol = "";
 
-const nombre = "Alonso";
-const apellido = "Iturrianda";
-
-const rol = "Guardia en la isla Epstein";
-const local = "Unimarc Av. San Martín 0675";
-
-const isAdmin = false;
-
+void definirRol(bool isAdmin){
+  if (isAdmin){
+    rol = "Encargado";
+  }
+  else {
+    rol = "Guardia";
+  }
+}
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
+  
 
   @override
   Widget build(BuildContext context) {
+    definirRol(userIsAdmin);
     return Scaffold(
       appBar: const CustomAppBar(),
       body: 
@@ -53,19 +55,19 @@ class ProfilePage extends StatelessWidget {
             const SizedBox(height: 40),
             
 
-            const Text("$nombre $apellido", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 30,)),
-            const Text("ID de usuario: $id", style: TextStyle(fontSize: 15)),
+            Text("$userName $userLastName", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 30,)),
+            Text("ID de usuario: $userId", style: const TextStyle(fontSize: 15)),
 
             const SizedBox(height: 30),
 
-            const Text("Rol: $rol", style: TextStyle(fontSize: 20)),
+            Text("Rol: $rol", style: const TextStyle(fontSize: 20)),
 
-            const Text("Local: $local", style: TextStyle(fontSize: 20),),
+            Text("Local: $userSupermarketId", style: const TextStyle(fontSize: 20),),
             const SizedBox(height: 20,),
             FilledButton(
               onPressed: () {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => debug()));
-              }, // Por el mometn no hace nada el boton
+              },
               style: FilledButton.styleFrom(backgroundColor: buttonColor, padding: EdgeInsets.all(16)),
               child: const Text("Opciones")), 
 

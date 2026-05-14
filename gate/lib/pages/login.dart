@@ -1,8 +1,13 @@
 // lib/debug.dart
 import 'package:flutter/material.dart';
+import 'package:gate/main.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 import '../config.dart';
 import '../custom_widgets/navbar.dart';
+
+final route = "$baseUrl/auth/login";
 
 // Default settings
 const emptyTextForm = "Campo vacio";
@@ -13,17 +18,93 @@ const examplePassword = "你好世界";
 var email = "";
 var pw = "";
 
+Future<void> getUserInfo(int id, String token) async {
+  
+  final response = await http.get(
+    Uri.parse("$baseUrl/usuarios/perfil/$id"), // Llamado a la API
+    headers: {
+      "Authorization": "Bearer $token",
+    },
+  );
+
+  print(response.body);
+
+  final data = jsonDecode(response.body);
+
+  userName = data["name"];
+  userLastName = data["last_name"];
+}
+
+ Future<void> login(BuildContext context) async {
+      try {
+        final response = await http.post(
+
+          Uri.parse(route),
+
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          body: jsonEncode({
+            "email": email,
+            "password": pw,
+          }),
+        );
+
+        // LOGIN EXITOSO
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+
+          userToken  = data["token"];
+          userId = data["usuario"]["id"];
+          userEmail = data["usuario"]["email"];
+
+          print("TOKEN: $userToken ID: $userId");
+
+          getUserInfo(userId, userToken);
+          
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const MiAppMapa(),
+            ),
+          );
+
+        }
+
+        // ERROR LOGIN
+        else {
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Credenciales invalidas"),
+            ),
+          );
+        }
+      }
+
+      catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error conexión: $e"),
+          ),
+        );
+      }
+    }
+
+
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
+  
 
   @override
   Widget build(BuildContext context) {
     final formkey = GlobalKey<FormState>(); // Form key
 
+   
     void submit() {
       if (formkey.currentState!.validate()) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text("Procesando data")));
+        login(context);
       }
     }
 

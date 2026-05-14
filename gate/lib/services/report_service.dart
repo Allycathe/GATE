@@ -4,12 +4,12 @@ import '../config.dart';
 
 class ReportService {
     static Future<List<dynamic>> listarReportes() async {
-        final url = Uri.parse('${AppConfig.baseUrl}/reportes');
+        final url = Uri.parse('$baseUrl/reportes');
 
         final response = await http.get(
             url,
             headers: {
-                'Authorization': 'Bearer ${AppConfig.token}',
+                'Authorization': 'Bearer $userToken',
             },
         );
 
@@ -26,13 +26,13 @@ class ReportService {
         required String description,
         required int idSupermarket,
     }) async {
-        final url = Uri.parse('${AppConfig.baseUrl}/reportes');
+        final url = Uri.parse('$baseUrl/reportes');
 
         final response = await http.post(
             url,
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': 'Bearer ${AppConfig.token}',
+                'Authorization': 'Bearer $userToken',
             },
             body: jsonEncode({
                 'id_thief': idThief,
@@ -55,13 +55,13 @@ class ReportService {
         required String description,
         required int idSupermarket,
     }) async {
-        final url = Uri.parse('${AppConfig.baseUrl}/reportes/$id');
+        final url = Uri.parse('$baseUrl/reportes/$id');
 
         final response = await http.put(
             url,
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': 'Bearer ${AppConfig.token}',
+                'Authorization': 'Bearer $userToken',
             },
             body: jsonEncode({
                 'id_thief': idThief,
@@ -79,12 +79,12 @@ class ReportService {
     }
 
     static Future<void> eliminarReporte(int id) async {
-        final url = Uri.parse('${AppConfig.baseUrl}/reportes/$id');
+        final url = Uri.parse('$baseUrl/reportes/$id');
 
         final response = await http.delete(
             url,
             headers: {
-                'Authorization': 'Bearer ${AppConfig.token}',
+                'Authorization': 'Bearer $userToken',
             },
         );
 
