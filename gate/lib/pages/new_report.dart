@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '/custom_widgets/navbar.dart';
 import '../config.dart';
+import '../services/report_service.dart';
 
 class NewReport extends StatefulWidget{
     const NewReport({super.key});
@@ -51,21 +52,30 @@ class _ReportPageState extends State<NewReport>{
         return "$year-$month-$day $hour:$minute";
     }
 
-    void guardarReporte(){
-        if(!_formKey.currentState!.validate()){
-            return; 
-        }
+Future<void> guardarReporte() async {
+    if(!_formKey.currentState!.validate()){
+        return; 
+    }
 
-        _formKey.currentState!.save();
+    _formKey.currentState!.save();
 
-        String nombreFinal = "";
+    String nombreFinal = "";
 
-        if(noExisteNombre == true){
-            nombreFinal = "Persona no identificada";
-        }
-        else{
-            nombreFinal = nombreController.text.trim();
-        }
+    if(noExisteNombre == true){
+        nombreFinal = "Persona no identificada";
+    }
+    else{
+        nombreFinal = nombreController.text.trim();
+    }
+
+    final descripcionFinal = "$nombreFinal - $descripcion";
+
+    try{
+        await ReportService.crearReporte(
+            idThief: 1,
+            description: descripcionFinal,
+            idSupermarket: 1,
+        );
 
         final nuevoReporte = {
             "persona": nombreFinal,
@@ -85,10 +95,18 @@ class _ReportPageState extends State<NewReport>{
 
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-                content: Text("Reporte registrado correctamente"),
+                content: Text("Reporte enviado correctamente"),
             ),
         );
     }
+    catch(error){
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text("Error al enviar reporte: $error"),
+            ),
+        );
+    }
+}
 
     @override
     void dispose(){

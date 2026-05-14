@@ -20,6 +20,8 @@ app.get('/db-test', async (req, res) => {
 
 app.use('/usuarios', require('./src/routes/usuarios')(pool));
 app.use('/auth', require('./src/routes/auth')(pool));
+app.use('/supermercados', require('./src/routes/super')(pool));
+app.use('/reportes', require('./src/routes/reportes')(pool));
 
 app.listen(port, '0.0.0.0', () => {
   console.log(`Servidor corriendo en puerto ${port}`);

@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 
 // Configuracion de backend
-const String baseUrl = 'https://gate.blade.dedyn.io';
+
+class AppConfig {
+  static const String baseUrl = 'https://gate.blade.dedyn.io';
+
+  static const String token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NiwiZW1haWwiOiJhZG1pbkBnYXRlLmNvbSIsImlhdCI6MTc3ODcxMjgzMiwiZXhwIjoxNzc4NzQxNjMyfQ.Qvs-Jigaf0ti1eXhChokmBiVeRP-0JddSHBivNHHqJE';
+}
 
 
 // Configuraciones de interfaz
