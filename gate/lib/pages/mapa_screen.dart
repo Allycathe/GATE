@@ -106,22 +106,30 @@ class _PantallaMapaState extends State<PantallaMapa> {
   }
 
   Future<void> _cargarSupermercados() async {
-    final lat = _ubicacionUsuario.latitude;
-    final lng = _ubicacionUsuario.longitude;
+    try {
+      final response = await http.get(
+        Uri.parse('https://gate.blade.dedyn.io/supermercados'),
+      );
 
-    debugPrint(
-        'Usando datos de prueba para supermercados cercanos a ($lat, $lng)');
-    setState(() {
-      _supermercados = [
-        {'nombre': 'Lider (demo)', 'lat': lat - 0.005, 'lng': lng + 0.005},
-        {'nombre': 'Unimarc (demo)', 'lat': lat + 0.003, 'lng': lng - 0.003},
-        {
-          'nombre': 'Santa Isabel (demo)',
-          'lat': lat - 0.002,
-          'lng': lng - 0.006
-        },
-      ];
-    });
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List supermercadosJson = data['supermercados'];
+
+        setState(() {
+          _supermercados = supermercadosJson
+              .map((s) => {
+                    'nombre': s['name'],
+                    'lat': s['location_y'], //  location_y es la latitud
+                    'lng': s['location_x'], // location_x es la longitud
+                  })
+              .toList();
+        });
+      } else {
+        debugPrint('Error al cargar supermercados: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error de conexión: $e');
+    }
   }
 
   void _mostrarReportes(String nombreSupermercado) {
