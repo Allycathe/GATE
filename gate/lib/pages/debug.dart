@@ -9,8 +9,7 @@ import '/config.dart';
 import 'login.dart';
 import 'error.dart';
 
-void logout(BuildContext context){
-
+void logout(BuildContext context) {
   // Limpiar sesión
   userToken = "";
 
@@ -28,13 +27,10 @@ void logout(BuildContext context){
 
   // Volver login
   Navigator.pushAndRemoveUntil(
-
     context,
-
     MaterialPageRoute(
       builder: (context) => const LoginPage(),
     ),
-
     (route) => false,
   );
 }
@@ -59,7 +55,6 @@ class debug extends StatelessWidget {
               },
               child: const Text("Ver Login"),
             ),
-
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
@@ -69,13 +64,13 @@ class debug extends StatelessWidget {
               },
               child: const Text("Ver pagina de error"),
             ),
-
-            FilledButton(onPressed: () {},  
-              style: FilledButton.styleFrom(backgroundColor: interfaceColor), child: const Text("Cambiar foto de perfil")
+            FilledButton(
+                onPressed: () {},
+                style: FilledButton.styleFrom(backgroundColor: interfaceColor),
+                child: const Text("Cambiar foto de perfil")),
+            SizedBox(
+              height: 20,
             ),
-
-            SizedBox(height: 20,),
-
             FilledButton(
               onPressed: () {
                 logout(context);
@@ -85,8 +80,6 @@ class debug extends StatelessWidget {
               ),
               child: const Text("Cerrar sesión"),
             ),
-
-            
             const Expanded(child: Text(" ")),
             const OptionContainer()
           ],
