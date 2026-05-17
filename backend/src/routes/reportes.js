@@ -8,7 +8,9 @@ module.exports = (pool) => {
   // 1. LISTAR TODOS LOS REPORTES (GET)
   router.get('/', auth, async (req, res) => {
     try {
-      const result = await pool.query('SELECT * FROM report ORDER BY id DESC');
+    const result = await pool.query(
+  'SELECT id, id_thief, description, date, id_supermarket FROM report ORDER BY id DESC'
+);
       res.json(result.rows);
     } catch (error) {
       console.error(error);
@@ -69,7 +71,7 @@ router.post('/', auth, compressImage, async (req, res) => {
         SET id_thief = $1, description = $2, id_supermarket = $3, image = $4 
         WHERE id = $5 
         RETURNING *`;
-      const result = await pool.query(query, [id_thief, description, id_supermarket, image, id]);
+      const result = await pool.query(query, [id_thief, description, id_supermarket, req.imageBuffer ?? null, id]);
       if (result.rowCount === 0) {
         return res.status(404).json({ error: 'El reporte no existe' });
       }
