@@ -1,5 +1,6 @@
 const express = require('express');
 const auth = require('../middleware/auth');
+const compressImage = require('../middleware/compressImage');
 
 module.exports = (pool) => {
   const router = express.Router();
@@ -30,27 +31,36 @@ module.exports = (pool) => {
     }
   });
 
-  // 3. CREAR UN REPORTE (POST)
-  router.post('/', auth, async (req, res) => {
-    const { id_thief, description, id_supermarket, image } = req.body;
-    if (!id_thief || !id_supermarket) {
-      return res.status(400).json({ error: 'Faltan campos obligatorios (id_thief, id_supermarket)' });
-    }
-    try {
-      const query = `
-        INSERT INTO report (id_thief, description, id_supermarket, image) 
-        VALUES ($1, $2, $3, $4) 
-        RETURNING *`;
-      const result = await pool.query(query, [id_thief, description, id_supermarket, image]);
-      res.status(201).json({ mensaje: 'Reporte creado con éxito', reporte: result.rows[0] });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Error interno al crear reporte' });
-    }
-  });
+// 3. CREAR UN REPORTE (POST)
+router.post('/', auth, compressImage, async (req, res) => {
+  const { id_thief, description, id_supermarket } = req.body;
+
+  if (!id_thief || !id_supermarket) {
+    return res.status(400).json({ error: 'Faltan campos obligatorios' });
+  }
+
+  try {
+    const query = `
+      INSERT INTO report (id_thief, description, id_supermarket, image) 
+      VALUES ($1, $2, $3, $4) 
+      RETURNING id, id_thief, description, id_supermarket`; // ← nunca retornes image
+
+    const result = await pool.query(query, [
+      id_thief,
+      description,
+      id_supermarket,
+      req.imageBuffer ?? null  // Buffer comprimido
+    ]);
+
+    res.status(201).json({ mensaje: 'Reporte creado con éxito', reporte: result.rows[0] });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error interno al crear reporte' });
+  }
+});
 
   // 4. MODIFICAR UN REPORTE (PUT)
-  router.put('/:id', auth, async (req, res) => {
+  router.put('/:id', auth, compressImage, async (req, res) => {
     const { id } = req.params;
     const { id_thief, description, id_supermarket, image } = req.body;
     try {
@@ -88,5 +98,32 @@ module.exports = (pool) => {
     }
   });
 
+  // GET imagen de un reporte
+router.get('/:id/imagen', auth, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('SELECT image FROM report WHERE id = $1', [id]);
+    
+    if (result.rowCount === 0 || !result.rows[0].image) {
+      return res.status(404).json({ error: 'Imagen no encontrada' });
+    }
+
+    const imageData = result.rows[0].image;
+
+    // pg devuelve bytea como Buffer directamente
+    const buffer = Buffer.isBuffer(imageData) 
+      ? imageData 
+      : Buffer.from(imageData);
+
+    res.setHeader('Content-Type', 'image/webp');
+    res.setHeader('Content-Length', buffer.length);
+    res.end(buffer);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al obtener imagen' });
+  }
+});
+
   return router;
 };
+

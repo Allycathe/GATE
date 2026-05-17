@@ -25,6 +25,7 @@ services:
     environment:
       DATABASE_URL: postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
       PORT: ${PORT}
+      TZ: America/Santiago
     volumes:
       - ./backend:/usr/src/app
       - /usr/src/app/node_modules
