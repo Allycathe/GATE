@@ -1,3 +1,4 @@
+process.env.TZ = 'America/Santiago';
 const express = require('express');
 const morgan = require('morgan');
 const { pool, comprobarConexion } = require('./src/db');

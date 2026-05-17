@@ -8,7 +8,8 @@ RUN apk add --no-cache \
     make \
     g++ \
     vips-dev \
-    fftw-dev
+    fftw-dev \
+    tzdata
 
 # 3. Directorio de trabajo
 WORKDIR /usr/src/app
