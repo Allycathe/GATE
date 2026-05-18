@@ -6,6 +6,9 @@ import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 import 'dart:convert';
 import 'dart:async';
+import '../config.dart';
+
+import '../services/report_service.dart';
 
 class PantallaMapa extends StatefulWidget {
   const PantallaMapa({super.key});
@@ -17,6 +20,9 @@ class PantallaMapa extends StatefulWidget {
 class _PantallaMapaState extends State<PantallaMapa> {
   LatLng _ubicacionUsuario = const LatLng(-33.4489, -70.6693);
   List<Map<String, dynamic>> _supermercados = [];
+
+  List<dynamic> _historialCompletoReportes = [];
+
   bool _cargando = true;
 
   @override
@@ -29,11 +35,20 @@ class _PantallaMapaState extends State<PantallaMapa> {
     await Future.delayed(Duration.zero);
     await _obtenerUbicacion();
     await _cargarSupermercados();
+    await _cargarTodosLosReportes();
     if (mounted) setState(() => _cargando = false);
   }
 
+  Future<void> _cargarTodosLosReportes() async {
+    try {
+      _historialCompletoReportes = await ReportService.listarReportes();
+    } catch (e) {
+      debugPrint('Error al cargar el historial de reportes: $e');
+      _historialCompletoReportes = [];
+    }
+  }
+
   Future<void> _obtenerUbicacion() async {
-    // 1. Verificar GPS
     bool servicioActivo = await Geolocator.isLocationServiceEnabled();
     if (!servicioActivo) {
       await _mostrarDialogoUbicacion(
@@ -45,7 +60,6 @@ class _PantallaMapaState extends State<PantallaMapa> {
       return _obtenerUbicacion();
     }
 
-    // 2. Verificar / solicitar permiso
     LocationPermission permiso = await Geolocator.checkPermission();
     if (permiso == LocationPermission.denied) {
       permiso = await Geolocator.requestPermission();
@@ -70,7 +84,6 @@ class _PantallaMapaState extends State<PantallaMapa> {
       return _obtenerUbicacion();
     }
 
-    // 3. Obtener posición
     final posicion = await Geolocator.getCurrentPosition();
     if (mounted) {
       setState(() {
@@ -109,6 +122,9 @@ class _PantallaMapaState extends State<PantallaMapa> {
     try {
       final response = await http.get(
         Uri.parse('https://gate.blade.dedyn.io/supermercados'),
+        headers: {
+          'Authorization': 'Bearer $userToken',
+        },
       );
 
       if (response.statusCode == 200) {
@@ -116,50 +132,146 @@ class _PantallaMapaState extends State<PantallaMapa> {
         final List supermercadosJson = data['supermercados'];
 
         setState(() {
-          _supermercados = supermercadosJson
-              .map((s) => {
-                    'nombre': s['name'],
-                    'lat': s['location_y'], //  location_y es la latitud
-                    'lng': s['location_x'], // location_x es la longitud
-                  })
-              .toList();
+          _supermercados = supermercadosJson.map((s) {
+            double lat = double.tryParse(s['location_y'].toString()) ?? 0.0;
+            double lng = double.tryParse(s['location_x'].toString()) ?? 0.0;
+            return {
+              'id': s['id'],
+              'nombre': s['name'],
+              'lat': lat,
+              'lng': lng,
+            };
+          }).where((s) {
+            final lat = s['lat'] as double;
+            final lng = s['lng'] as double;
+            return lat.isFinite && lng.isFinite && (lat != 0.0 || lng != 0.0);
+          }).toList();
         });
       } else {
         debugPrint('Error al cargar supermercados: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error de conexión: $e');
+      debugPrint('Error de conexión al cargar supermercados: $e');
     }
   }
 
-  void _mostrarReportes(String nombreSupermercado) {
+  List<dynamic> _filtrarReportes(int idSucursal) {
+    return _historialCompletoReportes.where((reporte) {
+      final idReporte = reporte["id_supermarket"];
+      if (idReporte == null) return false;
+      return int.tryParse(idReporte.toString()) == idSucursal;
+    }).toList();
+  }
+
+  void _mostrarReportes(int idSucursal, String nombreSupermercado) {
+    final reportesFiltrados = _filtrarReportes(idSucursal);
+
     showModalBottomSheet(
       context: context,
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          height: MediaQuery.of(context).size.height * 0.6,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                nombreSupermercado,
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      "Reportes: $nombreSupermercado",
+                      style: const TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
               ),
               const Divider(),
-              const Text("Reporte 1: Sospechoso en pasillo 3 - hace 10 min"),
-              const SizedBox(height: 8),
-              const Text("Reporte 2: Persona con bolso grande - hace 25 min"),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Cerrar"),
+              const SizedBox(height: 10),
+              Expanded(
+                child: reportesFiltrados.isEmpty
+                    ? const Center(
+                        child: Text(
+                          "No hay reportes recientes en esta sucursal.",
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: reportesFiltrados.length,
+                        itemBuilder: (context, index) {
+                          final reporte = reportesFiltrados[index];
+                          final idThief = reporte["id_thief"];
+                          final descripcion =
+                              reporte["description"] ?? "Sin descripción";
+
+                          final fechaApi = reporte["date"]?.toString() ?? "";
+                          final fecha = fechaApi.length > 16
+                              ? fechaApi.substring(0, 16)
+                              : "Sin fecha";
+
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            shape: RoundedRectangleBorder(
+                              side: const BorderSide(
+                                  color: Colors.black12, width: 1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: ListTile(
+                              leading: SizedBox(
+                                width: 60,
+                                height: 60,
+                                child: Image.network(
+                                  '$baseUrl/reportes/${reporte["id"]}/imagen',
+                                  fit: BoxFit.cover,
+                                  headers: {
+                                    'Authorization': 'Bearer $userToken',
+                                  },
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return const Icon(
+                                      Icons.report,
+                                      color: Colors.red,
+                                      size: 40,
+                                    );
+                                  },
+                                  loadingBuilder:
+                                      (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return const SizedBox(
+                                      width: 40,
+                                      height: 40,
+                                      child: Center(
+                                          child: CircularProgressIndicator()),
+                                    );
+                                  },
+                                ),
+                              ),
+                              title: Text(
+                                "ID Persona: $idThief",
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
+                              ),
+                              subtitle: Text(
+                                  "Fecha: $fecha\nDescripción: $descripcion"),
+                              isThreeLine: true,
+                            ),
+                          );
+                        },
+                      ),
               ),
             ],
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -184,26 +296,54 @@ class _PantallaMapaState extends State<PantallaMapa> {
                   ),
                   MarkerLayer(
                     markers: _supermercados.map((superMercado) {
+                      int cantidadReportes =
+                          _filtrarReportes(superMercado['id']).length;
+
                       return Marker(
                         point: LatLng(superMercado['lat'], superMercado['lng']),
                         width: 60,
                         height: 60,
                         child: GestureDetector(
-                          onTap: () => _mostrarReportes(superMercado['nombre']),
-                          child: Column(
+                          onTap: () => _mostrarReportes(
+                              superMercado['id'], superMercado['nombre']),
+                          child: Stack(
+                            clipBehavior: Clip.none,
                             children: [
-                              const Icon(Icons.store,
-                                  color: Colors.red, size: 30),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 4, vertical: 2),
-                                color: Colors.white,
-                                child: Text(
-                                  superMercado['nombre'],
-                                  style: const TextStyle(fontSize: 9),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                              Column(
+                                children: [
+                                  const Icon(Icons.store,
+                                      color: Colors.red, size: 30),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 4, vertical: 2),
+                                    color: Colors.white,
+                                    child: Text(
+                                      superMercado['nombre'],
+                                      style: const TextStyle(fontSize: 9),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
                               ),
+                              if (cantidadReportes > 0)
+                                Positioned(
+                                  top: -5,
+                                  right: 5,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(5),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.orange,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Text(
+                                      '$cantidadReportes',
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ),
                             ],
                           ),
                         ),

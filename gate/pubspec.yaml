@@ -28,6 +28,7 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+
   flutter:
     sdk: flutter
 
@@ -40,6 +41,7 @@ dependencies:
   http: ^1.2.0         # llamar a OVerpass API: sirve principalmente para extraer datos de OSM mediante consultas personalizadas
                        # API: Overpass QL (query language) envías una consulta y el servidor te devuelve datos en JSON o XML  
   geolocator: ^14.0.2  #
+  image_picker: ^1.1.2 
 
 dev_dependencies:
   flutter_test:
