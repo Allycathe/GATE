@@ -10,6 +10,7 @@ const port = process.env.PORT || 3000;
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 app.use(morgan('dev'));
+app.use(require('cors')());
 
 // Precarga modelos de reconocimiento facial al arrancar (evita latencia en primera petición)
 initFaceService().catch(err => console.error('[FaceService] Error al cargar modelos:', err.message));
