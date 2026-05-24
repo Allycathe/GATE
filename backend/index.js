@@ -2,6 +2,7 @@ process.env.TZ = 'America/Santiago';
 const express = require('express');
 const morgan = require('morgan');
 const { pool, comprobarConexion } = require('./src/db');
+const { init: initFaceService } = require('./src/services/faceService');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -10,12 +11,10 @@ app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 app.use(morgan('dev'));
 
+// Precarga modelos de reconocimiento facial al arrancar (evita latencia en primera petición)
+initFaceService().catch(err => console.error('[FaceService] Error al cargar modelos:', err.message));
 
 const auth = require('./src/middleware/auth');
-
-app.use(express.json({ limit: '20mb' }));
-app.use(express.urlencoded({ extended: true, limit: '20mb' }));
-app.use(morgan('dev'));
 
 // Rutas públicas (sin auth)
 
