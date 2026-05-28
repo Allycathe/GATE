@@ -1,18 +1,13 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
+import 'package:gate/pages/login.dart';
 
 // ** Importar otras paginas .dart (links)
 import 'config.dart';
 import 'custom_widgets/navbar.dart';
 import 'custom_widgets/option_menu.dart';
-import 'pages/debug.dart';
 
 // Variables: (Estaticas por el moment)
-
-const rol = "Guardia en la isla Epstein";
-const local = "Unimarc Av. San Martín 0675";
-
-const isAdmin = false;
 
 // ** Main
 void main() => runApp(const MiAppMapa());
@@ -34,52 +29,35 @@ class PantallaInicio extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: const CustomAppBar(),
         body: Center(
           child: Column(children: [
             const SizedBox(height: 50),
-            CircleAvatar(
-              radius: 100,
-              backgroundColor: const Color.fromARGB(255, 111, 189, 241),
-              child: ClipOval(
-                child: Image.asset(
-                  'assets/profile_pic.png',
-                  height: 200,
-                  width: 200,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Image.network(
-                      'https://i.pinimg.com/474x/c6/a9/a1/c6a9a1c3ec3b086dda8de521ffc46f61.jpg',
-                      height: 200,
-                      width: 200,
-                      fit: BoxFit.cover,
-                    );
-                  },
-                ),
-              ),
+            Image.asset(
+              'assets/gate_logo.png',
+              width: 120,
+              height: 120,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) {
+                return Image.network(
+                  'https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/LEGO_logo.svg/1280px-LEGO_logo.svg.png',
+                  height: 60,
+                  width: 120,
+                  fit: BoxFit.contain,
+                );
+              },
             ),
             const SizedBox(height: 40),
-            const Text("Bienvenido", style: titleTextStyle),
-            Text("$userName $userLastName",
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 30,
-                )),
+            const Text("Bienvenido a GATE", style: titleTextStyle),
             const SizedBox(
-              height: 20,
+              height: 50,
             ),
-            ElevatedButton(
-                onPressed: () {
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (context) => debug()));
-                }, // Por el mometn no hace nada el boton
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color.fromARGB(255, 0, 45, 245),
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text("DEBUG")),
-            const Expanded(child: Text(" ")),
-            const OptionContainer()
+            FilledButton(
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => LoginPage()));
+              },
+              style: FilledButton.styleFrom(backgroundColor: buttonColor, padding: EdgeInsets.all(16)),
+              child: const Text("Iniciar Sesion", style: TextStyle(fontSize: 20),)
+            ), 
           ]),
         ));
   }

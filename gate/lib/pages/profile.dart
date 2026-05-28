@@ -9,22 +9,16 @@ import '/pages/debug.dart';
 // Variables: (Estaticas por el moment)
 String rol = "";
 
-void definirRol(bool isAdmin){
-  if (isAdmin){
-    rol = "Encargado";
-  }
-  else {
-    rol = "Guardia";
-  }
+String definirRol(bool isAdmin) {
+  return isAdmin ? "Encargado" : "Guardia";
 }
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
   
-
   @override
   Widget build(BuildContext context) {
-    definirRol(userIsAdmin);
+    rol = definirRol(userIsAdmin);
     return Scaffold(
       appBar: const CustomAppBar(),
       body: 
