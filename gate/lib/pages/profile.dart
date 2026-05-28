@@ -4,7 +4,7 @@ import '../config.dart';
 import '../custom_widgets/option_menu.dart';
 import '../custom_widgets/navbar.dart';
 
-import '/pages/debug.dart';
+import 'user_options.dart';
 
 // Variables: (Estaticas por el moment)
 String rol = "";
@@ -60,7 +60,7 @@ class ProfilePage extends StatelessWidget {
             const SizedBox(height: 20,),
             FilledButton(
               onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => debug()));
+                Navigator.push(context, MaterialPageRoute(builder: (context) => UserOptions()));
               },
               style: FilledButton.styleFrom(backgroundColor: buttonColor, padding: EdgeInsets.all(16)),
               child: const Text("Opciones")), 

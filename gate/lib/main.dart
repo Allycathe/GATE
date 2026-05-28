@@ -4,8 +4,6 @@ import 'package:gate/pages/login.dart';
 
 // ** Importar otras paginas .dart (links)
 import 'config.dart';
-import 'custom_widgets/navbar.dart';
-import 'custom_widgets/option_menu.dart';
 
 // Variables: (Estaticas por el moment)
 

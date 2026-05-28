@@ -75,17 +75,7 @@ class _ReportsPageState extends State<ReportsPage> {
                 child: Column(
                   children: [
                     const SizedBox(height: 20),
-                    const Center(
-                      child: Text(
-                        "Reportes recientes",
-                        style: titleTextStyle,
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Column(
-                        children: [
-                          FilledButton(
+                    FilledButton(
                             onPressed: () {
                               Navigator.push(
                                 context,
@@ -98,8 +88,45 @@ class _ReportsPageState extends State<ReportsPage> {
                               backgroundColor: buttonColor,
                               padding: const EdgeInsets.all(16),
                             ),
-                            child: const Text("Ver mapa"),
-                          ),
+                            child: const Text("Visualizar mapa"),
+                    ),
+                    SizedBox(height: 20),
+
+                    FilledButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const PantallaMapa(),
+                                ),
+                              );
+                            },
+                            style: FilledButton.styleFrom(
+                              backgroundColor: buttonColor,
+                              padding: const EdgeInsets.all(16),
+                            ),
+                            child: const Text("Ver mis reportes"),
+                    ),
+
+                    Divider(
+                      height: 40,
+                      thickness: 2,
+                      indent: 20,
+                      endIndent: 20,
+                      color: const Color.fromARGB(255, 68, 68, 68),
+                    ),
+
+                    const Center(
+                      child: Text(
+                        "Reportes recientes",
+                        style: titleTextStyle,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Column(
+                        children: [
+                          
                           const SizedBox(height: 20),
                           FilledButton(
                             onPressed: () {
@@ -113,7 +140,7 @@ class _ReportsPageState extends State<ReportsPage> {
                               backgroundColor: interfaceColor,
                               padding: const EdgeInsets.all(16),
                             ),
-                            child: const Text("Actualizar reportes"),
+                            child: const Text("Actualizar lista de reportes"),
                           ),
                           const SizedBox(height: 20),
                           if (cargando == true)
