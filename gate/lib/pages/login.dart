@@ -35,6 +35,7 @@ Future<void> getUserInfo(int id, String token) async {
   userName = data["name"];
   userLastName = data["last_name"];
   userIsAdmin = data["isadmin"];
+  userSupermarketId = data["id_supermarket"];
 }
 
 Future<void> login(BuildContext context) async {
@@ -112,10 +113,12 @@ class LoginPage extends StatelessWidget {
               ),
               ColoredBox(
                   color: Colors.white,
-                  child: Padding(
-                      padding: const EdgeInsets.all(50),
-                      child: Column(// Textos
-                          children: [
+                  child: 
+                  Padding(
+                    padding: const EdgeInsets.all(50),
+                    child: 
+                    Column(// Textos
+                      children: [
                         const SizedBox(height: 10),
                         const Text("Bienvenido", style: titleTextStyle),
                         const SizedBox(height: 30),

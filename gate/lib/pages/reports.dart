@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gate/pages/mapa_screen.dart';
+import 'package:gate/pages/mis_reportes.dart';
 
 import '../config.dart';
 import '../custom_widgets/option_menu.dart';
@@ -97,7 +98,7 @@ class _ReportsPageState extends State<ReportsPage> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => const PantallaMapa(),
+                                  builder: (context) => const MisReportes(),
                                 ),
                               );
                             },
