@@ -2,6 +2,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:gate/pages/edit_user.dart';
 import 'package:gate/pages/new_user.dart';
 import 'package:http/http.dart' as http;
 
@@ -58,7 +59,7 @@ class AdminPage extends StatelessWidget {
                     SizedBox(height: 20,),
 
                     Text("Lista de usuarios", style: subTitleTextStyle,),
-                    Text("ENDPOINT PARA OBTENER USERS DEL LOCAL DEL ENCARGADO (/usuarios/local/:local)"),
+                    Text("ENDPOINT PARA SOLO OBTENER USERS DEL LOCAL DEL ENCARGADO (/usuarios/local/:local)"),
                     SizedBox(height: 20,),
 
                     // Encabezado de la tabla
@@ -123,7 +124,7 @@ class AdminPage extends StatelessWidget {
                     ),
 
                     ConstrainedBox(constraints: BoxConstraints(
-                      maxHeight: 200
+                      maxHeight: 500
                       ),
                       child: SingleChildScrollView(
                         child:
@@ -194,7 +195,20 @@ class AdminPage extends StatelessWidget {
 
                                               Padding(
                                                 padding: EdgeInsets.all(8),
-                                                child: Text("${user["id"]}"),
+                                                child: FilledButton(
+                                                  onPressed: () {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (context) => EditUserPage(
+                                                          editUserId: user["id"],
+                                                        ),
+                                                      ),
+                                                    );
+                                                  },
+                                                  style: FilledButton.styleFrom(backgroundColor: buttonColor, padding: EdgeInsets.all(16)),
+                                                  child: const Text("Editar")
+                                                ),
                                               ),
                                             ],
                                           ),
