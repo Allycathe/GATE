@@ -10,8 +10,9 @@ import '../custom_widgets/navbar.dart';
 import '../config.dart';
 import '../custom_widgets/option_menu.dart';
 
-Future<List<dynamic>> getUsers() async {
+var tablePadding = 15.0; 
 
+Future<List<dynamic>> getUsers() async {
   final response = await http.get(
     Uri.parse("$baseUrl/usuarios/"),
     headers: {
@@ -63,6 +64,7 @@ class AdminPage extends StatelessWidget {
                     SizedBox(height: 20,),
 
                     // Encabezado de la tabla
+                    Container(padding: EdgeInsets.only( left: tablePadding, top: tablePadding, right: tablePadding),child: 
                     Table(
                       border: TableBorder.all(
                         color: Colors.black,
@@ -122,11 +124,12 @@ class AdminPage extends StatelessWidget {
                             ),
                       ],
                     ),
-
+                    ),
                     ConstrainedBox(constraints: BoxConstraints(
                       maxHeight: 500
                       ),
-                      child: SingleChildScrollView(
+                      child: Container(padding: EdgeInsets.only( left: tablePadding, bottom: tablePadding, right: tablePadding) ,child: 
+                      SingleChildScrollView(
                         child:
                           Container(
                             decoration: BoxDecoration(
@@ -195,7 +198,8 @@ class AdminPage extends StatelessWidget {
 
                                               Padding(
                                                 padding: EdgeInsets.all(8),
-                                                child: FilledButton(
+                                                child: IconButton(
+                                                  icon: Icon(Icons.edit),
                                                   onPressed: () {
                                                     Navigator.push(
                                                       context,
@@ -206,8 +210,9 @@ class AdminPage extends StatelessWidget {
                                                       ),
                                                     );
                                                   },
-                                                  style: FilledButton.styleFrom(backgroundColor: buttonColor, padding: EdgeInsets.all(16)),
-                                                  child: const Text("Editar")
+                                                  tooltip: "Editar usuario",
+                                                  
+                                                  
                                                 ),
                                               ),
                                             ],
@@ -216,7 +221,7 @@ class AdminPage extends StatelessWidget {
                                     );
                                   },
                                   ))
-                      )
+                      ))
                     ),
                       
 
@@ -226,6 +231,7 @@ class AdminPage extends StatelessWidget {
                   ],
                 ),
               ),
+            
             ),
             
             const OptionContainer(),
