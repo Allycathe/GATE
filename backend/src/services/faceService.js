@@ -8,7 +8,7 @@ let modelsLoaded = false;
 const MODEL_PATH = path.join(__dirname, '../../node_modules/@vladmandic/face-api/model');
 
 // Umbral de distancia euclidiana: < 0.5 mismo mechero, 0.5-0.6 probable, > 0.6 diferente
-const SIMILARITY_THRESHOLD = 0.6;
+const SIMILARITY_THRESHOLD = 0.65;
 
 async function init() {
   if (modelsLoaded) return;
@@ -25,11 +25,15 @@ async function init() {
 async function extractDescriptor(imageBuffer) {
   await init();
   // TF.js node maneja JPEG/PNG nativamente; convertimos desde WebP con sharp
-  const jpegBuf = await sharp(imageBuffer).jpeg({ quality: 95 }).toBuffer();
+  const jpegBuf = await sharp(imageBuffer)
+  .normalize()
+  .sharpen()
+  .jpeg({ quality: 95 })
+  .toBuffer();
   const tensor = tf.node.decodeImage(jpegBuf, 3);
   try {
     const detection = await faceapi
-      .detectSingleFace(tensor, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
+      .detectSingleFace(tensor, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 }))
       .withFaceLandmarks()
       .withFaceDescriptor();
     return detection ? Array.from(detection.descriptor) : null;

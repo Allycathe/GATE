@@ -12,7 +12,7 @@ module.exports = (pool) => {
   router.get('/', auth, async (req, res) => {
     try {
       const result = await pool.query(
-        'SELECT id, id_thief, description, date, id_supermarket FROM report ORDER BY id DESC'
+        'SELECT id, id_thief, description, date, id_supermarket, id_user FROM report ORDER BY id DESC'
       );
       res.json(result.rows);
     } catch (error) {
@@ -41,7 +41,8 @@ module.exports = (pool) => {
 
   // 3. CREAR UN REPORTE
   router.post('/', auth, compressImage, faceDescriptor, async (req, res) => {
-    const { id_thief, description, id_supermarket } = req.body;
+    const { id_thief, description, id_supermarket} = req.body;
+    const id_user = req.usuario.id;
 
     if (!id_thief || !id_supermarket) {
       return res.status(400).json({ error: 'Faltan campos obligatorios' });
@@ -49,8 +50,8 @@ module.exports = (pool) => {
 
     try {
       const query = `
-        INSERT INTO report (id_thief, description, id_supermarket, image, face_descriptor)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO report (id_thief, description, id_supermarket, image, face_descriptor,id_user)
+        VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING id, id_thief, description, id_supermarket`;
 
       const result = await pool.query(query, [
@@ -59,6 +60,7 @@ module.exports = (pool) => {
         id_supermarket,
         req.imageBuffer ?? null,
         req.faceDescriptor ? JSON.stringify(req.faceDescriptor) : null,
+        id_user,
       ]);
 
       res.status(201).json({
