@@ -38,11 +38,13 @@ class _NewUserPageState extends State<NewUserPage> {
   }
 
   Future<void> submitUser() async {
+    
+    print("DEBUG: isAdmin ="); 
+    print(isAdmin);
 
     try {
 
       final response = await http.post(
-
         Uri.parse(route),
 
         headers: {
