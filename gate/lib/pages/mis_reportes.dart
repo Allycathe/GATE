@@ -181,9 +181,34 @@ class MisReportes extends StatelessWidget {
                                                       padding: EdgeInsets.all(8),
                                                       child: Text(reporte["date"]),
                                                     ),
-                                                    Padding(
-                                                      padding: EdgeInsets.all(8),
-                                                      //child: Text(reporte["image"]),
+                                                    Image.network(
+                                                      '$baseUrl/reportes/${reporte["id"]}/imagen',
+                                                      height: 100,
+                                                      width: 100,
+                                                      fit: BoxFit.cover,
+                                                      headers: {
+                                                        'Authorization': 'Bearer $userToken',
+                                                      },
+                                                      errorBuilder:
+                                                          (context, error, stackTrace) {
+                                                        return const Icon(
+                                                          Icons.report,
+                                                          size: 80,
+                                                          color: Colors.red,
+                                                        );
+                                                      },
+                                                      loadingBuilder:
+                                                          (context, child, loadingProgress) {
+                                                        if (loadingProgress == null)
+                                                          return child;
+                                                        return const SizedBox(
+                                                          height: 100,
+                                                          width: 100,
+                                                          child: Center(
+                                                              child:
+                                                                  CircularProgressIndicator()),
+                                                        );
+                                                      },
                                                     ),
 
                                                     // Boton para editar
