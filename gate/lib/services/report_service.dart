@@ -24,6 +24,7 @@ class ReportService {
     required int idThief,
     required String description,
     required int idSupermarket,
+    required int idReporter,
     File? imagen,
   }) async {
     final url = Uri.parse('$baseUrl/reportes');
@@ -46,6 +47,7 @@ class ReportService {
         'description': description,
         'id_supermarket': idSupermarket,
         if (imagenBase64 != null) 'image': imagenBase64,
+        'id_user': userId,
       }),
     );
 
