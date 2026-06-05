@@ -51,7 +51,6 @@ class _NewUserPageState extends State<NewUserPage> {
         },
 
         body: jsonEncode({
-
           "name": nombreController.text,
           "last_name": apellidoController.text,
           "email": emailController.text,
@@ -61,8 +60,6 @@ class _NewUserPageState extends State<NewUserPage> {
 
         }),
       );
-
-      print(response.body);
 
       // EXITOSO
       if (response.statusCode == 200 || response.statusCode == 201) {
