@@ -8,7 +8,6 @@ import 'package:http/http.dart' as http;
 import '../config.dart';
 import '../custom_widgets/navbar.dart';
 
-
 final route = "$baseUrl/auth/login";
 
 // Default settings
@@ -58,7 +57,6 @@ Future<void> login(BuildContext context) async {
       userToken = data["token"];
       userId = data["usuario"]["id"];
       userEmail = data["usuario"]["email"];
-      
 
       print("TOKEN: $userToken ID: $userId");
 
@@ -113,12 +111,10 @@ class LoginPage extends StatelessWidget {
               ),
               ColoredBox(
                   color: Colors.white,
-                  child: 
-                  Padding(
-                    padding: const EdgeInsets.all(50),
-                    child: 
-                    Column(// Textos
-                      children: [
+                  child: Padding(
+                      padding: const EdgeInsets.all(50),
+                      child: Column(// Textos
+                          children: [
                         const SizedBox(height: 10),
                         const Text("Bienvenido", style: titleTextStyle),
                         const SizedBox(height: 30),
