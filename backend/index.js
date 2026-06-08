@@ -28,7 +28,8 @@ app.get('/db-test', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
  });
-app.use('/auth', require('./src/routes/auth')(pool)); // login no requiere token
+app.use('/auth', require('./src/routes/auth')(pool));
+app.use('/demo', require('./src/routes/demo')); // login no requiere token
 
 // Auth global para todo lo demás
 app.use(auth);
