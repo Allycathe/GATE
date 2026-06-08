@@ -4,6 +4,7 @@ const compressImage = require('../middleware/compressImage');
 const isAdmin = require('../middleware/isAdmin');
 const faceDescriptor = require('../middleware/faceDescriptor');
 const { extractDescriptor, findSimilar } = require('../services/faceService');
+const { evaluateCrimeAlert } = require('../services/crimeAlertService');
 
 module.exports = (pool) => {
   const router = express.Router();
@@ -41,66 +42,110 @@ module.exports = (pool) => {
 
   // 3. CREAR UN REPORTE
   router.post('/', auth, compressImage, faceDescriptor, async (req, res) => {
-    const { id_thief, description, id_supermarket} = req.body;
-    const id_user = req.usuario.id;
+  const { id_thief, description, id_supermarket } = req.body;
+  const id_user = req.usuario.id;
 
-    if (!id_thief || !id_supermarket) {
-      return res.status(400).json({ error: 'Faltan campos obligatorios' });
-    }
+  if (!id_thief || !id_supermarket) {
+    return res.status(400).json({ error: 'Faltan campos obligatorios' });
+  }
 
-    try {
-      const query = `
-        INSERT INTO report (id_thief, description, id_supermarket, image, face_descriptor,id_user)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING id, id_thief, description, id_supermarket`;
+  try {
+    const query = `
+      INSERT INTO report (id_thief, description, id_supermarket, image, face_descriptor, id_user)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id, id_thief, description, id_supermarket`;
 
-      const result = await pool.query(query, [
-        id_thief,
-        description,
-        id_supermarket,
-        req.imageBuffer ?? null,
-        req.faceDescriptor ? JSON.stringify(req.faceDescriptor) : null,
-        id_user,
-      ]);
+    const result = await pool.query(query, [
+      id_thief,
+      description,
+      id_supermarket,
+      req.imageBuffer ?? null,
+      req.faceDescriptor ? JSON.stringify(req.faceDescriptor) : null,
+      id_user,
+    ]);
 
-      res.status(201).json({
-        mensaje: 'Reporte creado con éxito',
-        reporte: result.rows[0],
-        rostro_detectado: req.faceDescriptor !== null,
-      });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Error interno al crear reporte' });
-    }
-  });
+    const newReport = result.rows[0]; // 👈 extraer aquí
+
+    // 👇 disparar evaluación sin bloquear la respuesta
+    evaluateCrimeAlert(pool, newReport, {
+      radiusKm: 10,
+      windowHours: 1,
+      minReports: 2,
+    }).then((alert) => {
+      if (alert) {
+        console.log(`[CrimeAlert] Alerta #${alert.id} — ${alert.report_count} reportes en ${alert.radius_km}km / ${alert.time_window_h}h`);
+      }
+    }).catch((err) => {
+      console.error('[CrimeAlert] Error al evaluar alerta:', err.message);
+    });
+
+    res.status(201).json({
+      mensaje: 'Reporte creado con éxito',
+      reporte: newReport,
+      rostro_detectado: req.faceDescriptor !== null,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error interno al crear reporte' });
+  }
+});
 
   // 4. MODIFICAR UN REPORTE
-  router.put('/:id', auth, compressImage, faceDescriptor, async (req, res) => {
-    const { id } = req.params;
-    const { id_thief, description, id_supermarket } = req.body;
-    try {
-      const query = `
+router.put('/:id', auth, compressImage, faceDescriptor, async (req, res) => {
+  const { id } = req.params;
+  const { id_thief, description, id_supermarket } = req.body;
+
+  // Guard: si los campos obligatorios no llegaron, el Content-Type del frontend está mal
+  if (!id_thief || !id_supermarket) {
+    return res.status(400).json({
+      error: 'Faltan campos obligatorios',
+      debug: { id_thief, id_supermarket, content_type: req.headers['content-type'] }
+    });
+  }
+
+  try {
+    // Si no vino imagen nueva, preservar la existente en la DB
+    let imageBuffer = req.imageBuffer ?? undefined;
+    let faceDescriptor = req.faceDescriptor !== undefined ? req.faceDescriptor : undefined;
+
+    let query;
+    let params;
+
+    if (imageBuffer !== undefined) {
+      // Vino imagen nueva: actualizar imagen y descriptor
+      query = `
         UPDATE report
         SET id_thief = $1, description = $2, id_supermarket = $3, image = $4, face_descriptor = $5
         WHERE id = $6
         RETURNING id, id_thief, description, id_supermarket`;
-      const result = await pool.query(query, [
+      params = [
         id_thief,
         description,
         id_supermarket,
-        req.imageBuffer ?? null,
-        req.faceDescriptor ? JSON.stringify(req.faceDescriptor) : null,
+        imageBuffer,
+        faceDescriptor ? JSON.stringify(faceDescriptor) : null,
         id,
-      ]);
-      if (result.rowCount === 0) {
-        return res.status(404).json({ error: 'El reporte no existe' });
-      }
-      res.json({ mensaje: 'Reporte actualizado', reporte: result.rows[0] });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Error al actualizar el reporte' });
+      ];
+    } else {
+      // Sin imagen nueva: no tocar image ni face_descriptor
+      query = `
+        UPDATE report
+        SET id_thief = $1, description = $2, id_supermarket = $3
+        WHERE id = $4
+        RETURNING id, id_thief, description, id_supermarket`;
+      params = [id_thief, description, id_supermarket, id];
     }
-  });
+
+    const result = await pool.query(query, params);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'El reporte no existe' });
+    }
+    res.json({ mensaje: 'Reporte actualizado', reporte: result.rows[0] });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al actualizar el reporte' });
+  }
+});
 
   // 5. ELIMINAR UN REPORTE - solo admin
   router.delete('/:id', auth, isAdmin(pool), async (req, res) => {
