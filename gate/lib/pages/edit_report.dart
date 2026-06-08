@@ -1,22 +1,17 @@
 import 'dart:convert';
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:gate/config.dart';
 import 'package:gate/pages/encargado.dart';
 import 'package:gate/pages/mis_reportes.dart';
+import 'package:gate/services/report_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
-
 import '../custom_widgets/navbar.dart';
-
-
-// No se corrige correctamente la imagen
 
 const emptyTextForm = "Campo vacio";
 
 class EditReportPage extends StatefulWidget {
-
   final int editReportId;
 
   const EditReportPage({
@@ -24,20 +19,23 @@ class EditReportPage extends StatefulWidget {
     required this.editReportId,
   });
 
-  
-
   @override
   State<EditReportPage> createState() => _EditReportPage();
 }
 
 class _EditReportPage extends State<EditReportPage> {
-
   final ImagePicker _picker = ImagePicker();
-  File? _imagenSeleccionada;
-  final formkey = GlobalKey<FormState>();
+  File? _imagenNueva;          // imagen nueva seleccionada por el usuario
+  String? _imagenActualUrl;    // imagen que ya tenía el reporte (base64 o url)
 
+  final formkey = GlobalKey<FormState>();
   final descriptionController = TextEditingController();
-  final imageController = TextEditingController(); // Nose si funcione DEBUG
+
+  // Campos que se cargan del reporte existente
+  int _idThief = 0;
+  int _idSupermarket = 0;
+
+  bool _cargando = true;
 
   Future<void> loadReportInfo() async {
     final response = await http.get(
@@ -47,13 +45,14 @@ class _EditReportPage extends State<EditReportPage> {
       },
     );
 
-    print(response.body);
-
     final data = jsonDecode(response.body);
 
     setState(() {
-      descriptionController.text = data["description"];
-
+      descriptionController.text = data["description"] ?? "";
+      _idThief = data["id_thief"] ?? 0;
+      _idSupermarket = data["id_supermarket"] ?? 0;
+      _imagenActualUrl = data["image"]; // null si no tiene imagen
+      _cargando = false;
     });
   }
   @override
@@ -63,74 +62,40 @@ class _EditReportPage extends State<EditReportPage> {
   }
   @override
   void dispose() {
-    descriptionController.dispose(); // Falta la img
+    descriptionController.dispose();
     super.dispose();
   }
 
   Future<void> submitReport() async {
     try {
-
-      final response = await http.put(
-
-        Uri.parse("$baseUrl/reportes/${widget.editReportId}"),
-
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer $userToken",
-        },
-
-        body: jsonEncode({
-          "description": descriptionController.text,
-
-        }),
+      await ReportService.actualizarReporte(
+        id: widget.editReportId,
+        idThief: _idThief,
+        description: descriptionController.text,
+        idSupermarket: _idSupermarket,
+        imagen: _imagenNueva,            // null si no cambió
+        imagenUrlActual: _imagenActualUrl, // reenvía la anterior si no cambió
       );
 
-      print(response.body);
-
-      // EXITOSO
-      if (response.statusCode == 200 || response.statusCode == 201) {
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const AdminPage(),
-          ),
-        );
-      }
-
-      // ERROR
-      else {
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Error al modificar al usuario"),
-          ),
-        );
-      }
-
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const MisReportes()),
+      );
     } catch (e) {
-
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Error conexión: $e"),
-        ),
+        SnackBar(content: Text("Error al modificar reporte: $e")),
       );
     }
   }
 
   Future<void> deleteReport() async {
     try {
-
       final response = await http.delete(
-
         Uri.parse("$baseUrl/reportes/${widget.editReportId}"),
-
         headers: {
           "Authorization": "Bearer $userToken",
         },
       );
-
-      print(response.body);
 
       if (response.statusCode == 200) {
 
@@ -169,11 +134,8 @@ class _EditReportPage extends State<EditReportPage> {
 
     if (imagen != null) {
       setState(() {
-        _imagenSeleccionada = File(imagen.path);
+        _imagenNueva = File(imagen.path);
       });
-    }
-    else{
-      // Aca deberia seleccionar la imagen antigua, en caso de haber... o nose
     }
   }
 
@@ -182,6 +144,62 @@ class _EditReportPage extends State<EditReportPage> {
       submitReport();
     }
   }
+
+  Widget _buildImagePreview() {
+    if (_imagenNueva != null) {
+      // El usuario eligió una imagen nueva
+      return _imageStack(Image.file(_imagenNueva!, fit: BoxFit.cover));
+    }
+
+    if (_imagenActualUrl != null && _imagenActualUrl!.isNotEmpty) {
+      // Mostrar la imagen guardada en el servidor
+      final isBase64 = _imagenActualUrl!.startsWith("data:image");
+      final imageWidget = isBase64
+          ? Image.memory(
+              base64Decode(_imagenActualUrl!.split(",").last),
+              fit: BoxFit.cover,
+            )
+          : Image.network(_imagenActualUrl!, fit: BoxFit.cover);
+
+      return _imageStack(imageWidget);
+    }
+
+    return const Text(
+      "Sin imagen adjunta",
+      style: TextStyle(color: Colors.grey),
+    );
+  }
+
+  Widget _imageStack(Widget imageWidget) {
+    return Stack(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: SizedBox(
+            height: 180,
+            width: double.infinity,
+            child: imageWidget,
+          ),
+        ),
+        if (_imagenNueva != null)
+          Positioned(
+            top: 6,
+            right: 6,
+            child: GestureDetector(
+              onTap: () => setState(() => _imagenNueva = null),
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.black54,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close, color: Colors.white, size: 20),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -232,10 +250,15 @@ class _EditReportPage extends State<EditReportPage> {
                           },
                         ),
 
-                        SizedBox(height: 40,),
+                        const SizedBox(height: 20),
+                            const Text(
+                              "Imagen o evidencia",
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 8),
+                            _buildImagePreview(),
+                            const SizedBox(height: 10),
 
-                        // Botones de cámara y galería
-                        Text("Modificar img no funcional,,,"), // DEBUG
                         Row(
                           children: [
                             FilledButton.icon(

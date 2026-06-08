@@ -64,8 +64,21 @@ class ReportService {
     required int idThief,
     required String description,
     required int idSupermarket,
+    File? imagen,
+    String? imagenUrlActual, // Se reenvía si no se cambia la imagen
   }) async {
     final url = Uri.parse('$baseUrl/reportes/$id');
+
+    String? imagenFinal;
+    if (imagen != null) {
+      // Nueva imagen seleccionada → convertir a base64
+      final bytes = await imagen.readAsBytes();
+      imagenFinal = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+    } else if (imagenUrlActual != null) {
+      // Sin cambios → reenviar la URL/base64 que ya tenía
+      imagenFinal = imagenUrlActual;
+    }
+
     final response = await http.put(
       url,
       headers: {
@@ -76,8 +89,10 @@ class ReportService {
         'id_thief': idThief,
         'description': description,
         'id_supermarket': idSupermarket,
+        if (imagenFinal != null) 'image': imagenFinal,
       }),
     );
+
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {

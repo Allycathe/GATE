@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:gate/pages/mapa_screen.dart';
-import 'package:gate/pages/mis_reportes.dart';
 
 import '../config.dart';
 import '../custom_widgets/option_menu.dart';
@@ -76,7 +75,17 @@ class _ReportsPageState extends State<ReportsPage> {
                 child: Column(
                   children: [
                     const SizedBox(height: 20),
-                    FilledButton(
+                    const Center(
+                      child: Text(
+                        "Reportes recientes",
+                        style: titleTextStyle,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Column(
+                        children: [
+                          FilledButton(
                             onPressed: () {
                               Navigator.push(
                                 context,
@@ -89,45 +98,8 @@ class _ReportsPageState extends State<ReportsPage> {
                               backgroundColor: buttonColor,
                               padding: const EdgeInsets.all(16),
                             ),
-                            child: const Text("Visualizar mapa"),
-                    ),
-                    SizedBox(height: 20),
-
-                    FilledButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const MisReportes(),
-                                ),
-                              );
-                            },
-                            style: FilledButton.styleFrom(
-                              backgroundColor: buttonColor,
-                              padding: const EdgeInsets.all(16),
-                            ),
-                            child: const Text("Ver mis reportes"),
-                    ),
-
-                    Divider(
-                      height: 40,
-                      thickness: 2,
-                      indent: 20,
-                      endIndent: 20,
-                      color: const Color.fromARGB(255, 68, 68, 68),
-                    ),
-
-                    const Center(
-                      child: Text(
-                        "Reportes recientes",
-                        style: titleTextStyle,
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Column(
-                        children: [
-                          
+                            child: const Text("Ver mapa"),
+                          ),
                           const SizedBox(height: 20),
                           FilledButton(
                             onPressed: () {
@@ -141,7 +113,7 @@ class _ReportsPageState extends State<ReportsPage> {
                               backgroundColor: interfaceColor,
                               padding: const EdgeInsets.all(16),
                             ),
-                            child: const Text("Actualizar lista de reportes"),
+                            child: const Text("Actualizar reportes"),
                           ),
                           const SizedBox(height: 20),
                           if (cargando == true)
