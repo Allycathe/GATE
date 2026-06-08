@@ -1,4 +1,3 @@
-// lib/debug.dart
 import 'package:flutter/material.dart';
 import 'package:gate/custom_widgets/navbar.dart';
 import 'package:gate/custom_widgets/option_menu.dart';
