@@ -1,58 +1,386 @@
+// lib/screens/mapa_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:latlong2/latlong.dart' hide Path;
 import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 import 'dart:convert';
-import '../config.dart'; // <-- necesario para userToken y baseUrl
-
+import 'dart:async';
+import 'dart:math' as math;
+import '../config.dart';
 import '../services/report_service.dart';
 
-// ─────────────────────────────────────────────
-// Constantes
-// ─────────────────────────────────────────────
-abstract class _MapConstants {
-  static const LatLng defaultLocation = LatLng(-33.4489, -70.6693);
-  static const double defaultZoom = 14.0;
-  static const double minZoom = 5.0;
-  static const double maxZoom = 18.0;
-  static const double recenterZoom = 15.0;
-  static const String apiUrl = 'https://gate.blade.dedyn.io/supermercados';
-  static const String tileLight =
-      'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
-  static const String tileDark =
-      'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
-  static const List<String> tileSubdomains = ['a', 'b', 'c'];
-  static const String userAgent = 'com.gate.app';
-  static const int riskThresholdLow = 1;
-  static const int riskThresholdHigh = 3;
+// ─── THEME ──────────────────────────────────────────────────────────────────
+
+class MapTheme {
+  final bool isDark;
+
+  const MapTheme({required this.isDark});
+
+  Color get background => isDark ? const Color(0xFF0D1117) : const Color(0xFFF4F6FA);
+  Color get surface => isDark ? const Color(0xFF161B22) : Colors.white;
+  Color get surfaceVariant => isDark ? const Color(0xFF1F2937) : const Color(0xFFF0F4FF);
+  Color get primary => const Color(0xFF6366F1); // indigo accent
+  Color get danger => const Color(0xFFEF4444);
+  Color get warning => const Color(0xFFF59E0B);
+  Color get success => const Color(0xFF10B981);
+  Color get textPrimary => isDark ? const Color(0xFFF0F6FC) : const Color(0xFF0D1117);
+  Color get textSecondary => isDark ? const Color(0xFF8B949E) : const Color(0xFF6B7280);
+  Color get border => isDark ? const Color(0xFF30363D) : const Color(0xFFE5E7EB);
+  Color get cardShadow => isDark ? Colors.black54 : Colors.black12;
+  String get tileUrl => isDark
+      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
+      : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
 }
 
-class Supermercado {
-  const Supermercado({
-    required this.id,
-    required this.nombre,
-    required this.ubicacion,
+// ─── PULSING MARKER WIDGET ──────────────────────────────────────────────────
+
+class PulsingMarker extends StatefulWidget {
+  final Color color;
+  final int reportCount;
+  final String name;
+  final VoidCallback onTap;
+  final bool isDark;
+
+  const PulsingMarker({
+    super.key,
+    required this.color,
+    required this.reportCount,
+    required this.name,
+    required this.onTap,
+    required this.isDark,
   });
 
-  final int id;
-  final String nombre;
-  final LatLng ubicacion;
+  @override
+  State<PulsingMarker> createState() => _PulsingMarkerState();
+}
 
-  factory Supermercado.fromJson(Map<String, dynamic> json) {
-    final lat = double.tryParse(json['location_y'].toString()) ?? 0.0;
-    final lng = double.tryParse(json['location_x'].toString()) ?? 0.0;
-    return Supermercado(
-      id: json['id'] as int,
-      nombre: json['name'] as String,
-      ubicacion: LatLng(lat, lng),
+class _PulsingMarkerState extends State<PulsingMarker>
+    with TickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late AnimationController _bounceController;
+  late Animation<double> _pulseAnim;
+  late Animation<double> _bounceAnim;
+  bool _pressed = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat(reverse: false);
+
+    _pulseAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeOut),
+    );
+
+    _bounceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+
+    _bounceAnim = Tween<double>(begin: 1.0, end: 0.85).animate(
+      CurvedAnimation(parent: _bounceController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    _bounceController.dispose();
+    super.dispose();
+  }
+
+  void _handleTap() {
+    HapticFeedback.mediumImpact();
+    _bounceController.forward().then((_) => _bounceController.reverse());
+    widget.onTap();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasReports = widget.reportCount > 0;
+
+    return GestureDetector(
+      onTap: _handleTap,
+      child: AnimatedBuilder(
+        animation: Listenable.merge([_pulseAnim, _bounceAnim]),
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _bounceAnim.value,
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                // Pulse ring (only when reports exist)
+                if (hasReports)
+                  Opacity(
+                    opacity: (1.0 - _pulseAnim.value).clamp(0.0, 0.6),
+                    child: Transform.scale(
+                      scale: 1.0 + _pulseAnim.value * 1.8,
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: widget.color.withOpacity(0.8),
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Main pin
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: widget.isDark
+                            ? const Color(0xFF1F2937)
+                            : Colors.white,
+                        border: Border.all(color: widget.color, width: 2.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: widget.color.withOpacity(0.4),
+                            blurRadius: 10,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.store_rounded,
+                        color: widget.color,
+                        size: 20,
+                      ),
+                    ),
+                    // Pin tail
+                    CustomPaint(
+                      size: const Size(12, 8),
+                      painter: _PinTailPainter(color: widget.color),
+                    ),
+                  ],
+                ),
+
+                // Report badge
+                if (hasReports)
+                  Positioned(
+                    top: -4,
+                    right: -4,
+                    child: Container(
+                      constraints: const BoxConstraints(minWidth: 20),
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: widget.color,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: widget.color.withOpacity(0.5),
+                            blurRadius: 6,
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        '${widget.reportCount}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+
+                // Name label (below pin)
+                Positioned(
+                  bottom: -18,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: widget.isDark
+                          ? const Color(0xFF1F2937).withOpacity(0.95)
+                          : Colors.white.withOpacity(0.95),
+                      borderRadius: BorderRadius.circular(6),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.15),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      widget.name,
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600,
+                        color: widget.isDark
+                            ? const Color(0xFFF0F6FC)
+                            : const Color(0xFF0D1117),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }
 
-// ─────────────────────────────────────────────
-// PANTALLA PRINCIPAL
-// ─────────────────────────────────────────────
+class _PinTailPainter extends CustomPainter {
+  final Color color;
+  _PinTailPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = color;
+    final path = Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width / 2, size.height)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// ─── USER LOCATION MARKER ───────────────────────────────────────────────────
+
+class UserLocationMarker extends StatefulWidget {
+  const UserLocationMarker({super.key});
+
+  @override
+  State<UserLocationMarker> createState() => _UserLocationMarkerState();
+}
+
+class _UserLocationMarkerState extends State<UserLocationMarker>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat();
+    _anim = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (context, child) {
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            // Outer ripple
+            Opacity(
+              opacity: (1 - _anim.value) * 0.4,
+              child: Transform.scale(
+                scale: 1 + _anim.value * 3,
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFF6366F1),
+                  ),
+                ),
+              ),
+            ),
+            // Inner dot
+            Container(
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF6366F1),
+                border: Border.all(color: Colors.white, width: 2.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF6366F1).withOpacity(0.5),
+                    blurRadius: 8,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ─── STATS CHIP ─────────────────────────────────────────────────────────────
+
+class _StatChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final bool isDark;
+
+  const _StatChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── MAIN SCREEN ─────────────────────────────────────────────────────────────
+
 class PantallaMapa extends StatefulWidget {
   const PantallaMapa({super.key});
 
@@ -60,58 +388,94 @@ class PantallaMapa extends StatefulWidget {
   State<PantallaMapa> createState() => _PantallaMapaState();
 }
 
-class _PantallaMapaState extends State<PantallaMapa> {
-  LatLng _ubicacionUsuario = _MapConstants.defaultLocation;
-  List<Supermercado> _supermercados = [];
-
-  /// Caché de reportes por sucursal
-  Map<int, List<dynamic>> _reportesPorSucursal = {};
-
+class _PantallaMapaState extends State<PantallaMapa>
+    with TickerProviderStateMixin {
+  LatLng _ubicacionUsuario = const LatLng(-33.4489, -70.6693);
+  List<Map<String, dynamic>> _supermercados = [];
+  List<dynamic> _historialCompletoReportes = [];
   bool _cargando = true;
-  bool _isDarkMode = false;
-
+  bool _isDarkMode = true;
+  String _filtroActivo = 'todos'; // todos | con_reportes | sin_reportes
+  String _searchQuery = '';
   final MapController _mapController = MapController();
+  final TextEditingController _searchController = TextEditingController();
+  bool _showSearch = false;
+
+  late AnimationController _fabController;
+  late AnimationController _loadingController;
+  late AnimationController _headerController;
+  late Animation<double> _fabAnim;
+  late Animation<Offset> _headerSlide;
+
+  MapTheme get _theme => MapTheme(isDark: _isDarkMode);
 
   @override
   void initState() {
     super.initState();
+
+    _fabController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _fabAnim = CurvedAnimation(parent: _fabController, curve: Curves.easeOut);
+
+    _loadingController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat();
+
+    _headerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _headerSlide = Tween<Offset>(
+      begin: const Offset(0, -1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _headerController, curve: Curves.easeOut));
+
     _inicializar();
   }
 
   @override
   void dispose() {
-    _mapController.dispose();
+    _fabController.dispose();
+    _loadingController.dispose();
+    _headerController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
-  // ── Inicialización ───────────────────────────────────────────────────
-
   Future<void> _inicializar() async {
+    await Future.delayed(Duration.zero);
     await _obtenerUbicacion();
     await Future.wait([
       _cargarSupermercados(),
       _cargarTodosLosReportes(),
     ]);
-    if (mounted) setState(() => _cargando = false);
+    if (mounted) {
+      setState(() => _cargando = false);
+      _fabController.forward();
+      _headerController.forward();
+    }
   }
 
-  Future<void> _recargarDatos() async {
-    await Future.wait([
-      _cargarSupermercados(),
-      _cargarTodosLosReportes(),
-    ]);
-    if (mounted) setState(() {});
+  Future<void> _cargarTodosLosReportes() async {
+    try {
+      _historialCompletoReportes = await ReportService.listarReportes();
+    } catch (e) {
+      debugPrint('Error al cargar reportes: $e');
+      _historialCompletoReportes = [];
+    }
   }
-
-  // ── GPS ──────────────────────────────────────────────────────────────
 
   Future<void> _obtenerUbicacion() async {
-    if (!await Geolocator.isLocationServiceEnabled()) {
+    bool servicioActivo = await Geolocator.isLocationServiceEnabled();
+    if (!servicioActivo) {
       await _mostrarDialogoUbicacion(
         titulo: 'GPS desactivado',
         mensaje: 'Activa el GPS para continuar.',
         boton: 'Abrir configuración',
-        accion: Geolocator.openLocationSettings,
+        accion: () => Geolocator.openLocationSettings(),
       );
       return _obtenerUbicacion();
     }
@@ -120,34 +484,31 @@ class _PantallaMapaState extends State<PantallaMapa> {
     if (permiso == LocationPermission.denied) {
       permiso = await Geolocator.requestPermission();
     }
-
     if (permiso == LocationPermission.denied) {
       await _mostrarDialogoUbicacion(
         titulo: 'Permiso denegado',
-        mensaje:
-            'Necesitamos tu ubicación para mostrarte supermercados cercanos.',
+        mensaje: 'Necesitamos tu ubicación para mostrarte sucursales cercanas.',
         boton: 'Reintentar',
         accion: null,
       );
       return _obtenerUbicacion();
     }
-
     if (permiso == LocationPermission.deniedForever) {
       await _mostrarDialogoUbicacion(
         titulo: 'Permiso bloqueado',
         mensaje: 'Habilita la ubicación manualmente en Configuración.',
         boton: 'Abrir configuración',
-        accion: Geolocator.openAppSettings,
+        accion: () => Geolocator.openAppSettings(),
       );
       return _obtenerUbicacion();
     }
 
-    final posicion = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
-    if (!mounted) return;
-    setState(() =>
-        _ubicacionUsuario = LatLng(posicion.latitude, posicion.longitude));
+    final posicion = await Geolocator.getCurrentPosition();
+    if (mounted) {
+      setState(() {
+        _ubicacionUsuario = LatLng(posicion.latitude, posicion.longitude);
+      });
+    }
   }
 
   Future<void> _mostrarDialogoUbicacion({
@@ -157,258 +518,199 @@ class _PantallaMapaState extends State<PantallaMapa> {
     required Future<void> Function()? accion,
   }) async {
     if (!mounted) return;
-    await showDialog<void>(
+    await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => AlertDialog(
-        title: Text(titulo),
-        content: Text(mensaje),
+        backgroundColor: _theme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(titulo,
+            style: TextStyle(color: _theme.textPrimary, fontWeight: FontWeight.bold)),
+        content: Text(mensaje, style: TextStyle(color: _theme.textSecondary)),
         actions: [
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              await accion?.call();
+              if (accion != null) await accion();
             },
-            child: Text(boton),
+            child: Text(boton, style: TextStyle(color: _theme.primary)),
           ),
         ],
       ),
     );
   }
-
-  // ── Carga de datos ───────────────────────────────────────────────────
 
   Future<void> _cargarSupermercados() async {
     try {
       final response = await http.get(
-        Uri.parse(_MapConstants.apiUrl),
-        headers: {
-          'Authorization': 'Bearer $userToken', // <-- token agregado
-        },
+        Uri.parse('https://gate.blade.dedyn.io/supermercados'),
+        headers: {'Authorization': 'Bearer $userToken'},
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final lista = (data['supermercados'] as List)
-            .map((j) => Supermercado.fromJson(j as Map<String, dynamic>))
-            // Descarta supermercados sin coordenadas válidas
-            .where((s) =>
-                s.ubicacion.latitude.isFinite &&
-                s.ubicacion.longitude.isFinite &&
-                (s.ubicacion.latitude != 0.0 || s.ubicacion.longitude != 0.0))
-            .toList();
+        final data = jsonDecode(response.body);
+        final List supermercadosJson = data['supermercados'];
 
-        if (mounted) setState(() => _supermercados = lista);
-      } else {
-        _mostrarError('Error al cargar supermercados (${response.statusCode})');
+        setState(() {
+          _supermercados = supermercadosJson.map((s) {
+            double lat = double.tryParse(s['location_y'].toString()) ?? 0.0;
+            double lng = double.tryParse(s['location_x'].toString()) ?? 0.0;
+            return {
+              'id': s['id'],
+              'nombre': s['name'],
+              'lat': lat,
+              'lng': lng,
+            };
+          }).where((s) {
+            final lat = s['lat'] as double;
+            final lng = s['lng'] as double;
+            return lat.isFinite && lng.isFinite && (lat != 0.0 || lng != 0.0);
+          }).toList();
+        });
       }
     } catch (e) {
-      _mostrarError('Sin conexión. Verifica tu red.');
-      debugPrint('_cargarSupermercados: $e');
+      debugPrint('Error de conexión: $e');
     }
   }
 
-  Future<void> _cargarTodosLosReportes() async {
-    try {
-      final todos = await ReportService.listarReportes();
-
-      final Map<int, List<dynamic>> cache = {};
-      for (final r in todos) {
-        // int.tryParse para manejar tanto int como String desde la API
-        final id = int.tryParse(r['id_supermarket']?.toString() ?? '');
-        if (id == null) continue;
-        (cache[id] ??= []).add(r);
-      }
-
-      for (final lista in cache.values) {
-        lista.sort((a, b) => (b['date']?.toString() ?? '')
-            .compareTo(a['date']?.toString() ?? ''));
-      }
-
-      if (mounted) setState(() => _reportesPorSucursal = cache);
-    } catch (e) {
-      debugPrint('_cargarTodosLosReportes: $e');
-      _mostrarError('No se pudieron cargar los reportes.');
-    }
+  List<dynamic> _filtrarReportes(int idSucursal) {
+    return _historialCompletoReportes.where((r) {
+      final id = r["id_supermarket"];
+      if (id == null) return false;
+      return int.tryParse(id.toString()) == idSucursal;
+    }).toList();
   }
 
-  // ── Helpers ──────────────────────────────────────────────────────────
+  List<Map<String, dynamic>> get _supermercadosFiltrados {
+    return _supermercados.where((s) {
+      final nombre = s['nombre'].toString().toLowerCase();
+      final matchSearch = _searchQuery.isEmpty ||
+          nombre.contains(_searchQuery.toLowerCase());
 
-  List<dynamic> _reportesDe(int idSucursal) =>
-      _reportesPorSucursal[idSucursal] ?? [];
+      final count = _filtrarReportes(s['id']).length;
+      final matchFilter = _filtroActivo == 'todos' ||
+          (_filtroActivo == 'con_reportes' && count > 0) ||
+          (_filtroActivo == 'sin_reportes' && count == 0);
 
-  int _cantidadReportes(int idSucursal) => _reportesDe(idSucursal).length;
-
-  Color _colorRiesgo(int cantidad) {
-    if (cantidad >= _MapConstants.riskThresholdHigh) return Colors.red;
-    if (cantidad >= _MapConstants.riskThresholdLow) return Colors.orange;
-    return Colors.green;
+      return matchSearch && matchFilter;
+    }).toList();
   }
 
-  IconData _iconoSupermercado(String nombre) {
-    final n = nombre.toLowerCase();
-    if (n.contains('lider')) return Icons.shopping_cart;
-    if (n.contains('jumbo')) return Icons.star;
-    if (n.contains('santa isabel')) return Icons.shopping_basket;
-    if (n.contains('unimarc')) return Icons.local_grocery_store;
-    if (n.contains('tottus')) return Icons.store_mall_directory;
-    return Icons.storefront;
-  }
-
-  String _tiempoRelativo(String fechaApi) {
-    if (fechaApi.isEmpty) return 'Sin fecha';
-    try {
-      final fecha = DateTime.parse(fechaApi);
-      final diff = DateTime.now().difference(fecha);
-      if (diff.inDays > 1) return 'Hace ${diff.inDays} días';
-      if (diff.inDays == 1) return 'Ayer';
-      if (diff.inHours > 0) return 'Hace ${diff.inHours} h';
-      if (diff.inMinutes > 0) return 'Hace ${diff.inMinutes} min';
-      return 'Hace un momento';
-    } catch (_) {
-      return fechaApi.length > 16 ? fechaApi.substring(0, 16) : fechaApi;
-    }
-  }
-
-  void _mostrarError(String mensaje) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(mensaje),
-        backgroundColor: Colors.redAccent,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+  Color _markerColor(int count) {
+    if (count == 0) return _theme.success;
+    if (count < 3) return _theme.warning;
+    return _theme.danger;
   }
 
   void _centrarEnUsuario() {
-    _mapController.move(_ubicacionUsuario, _MapConstants.recenterZoom);
-    _obtenerUbicacion();
+    HapticFeedback.lightImpact();
+    _mapController.move(_ubicacionUsuario, 15.0);
   }
 
-  // ── Bottom Sheet ─────────────────────────────────────────────────────
+  Future<void> _refrescar() async {
+    HapticFeedback.mediumImpact();
+    setState(() => _cargando = true);
+    await Future.wait([
+      _cargarSupermercados(),
+      _cargarTodosLosReportes(),
+    ]);
+    setState(() => _cargando = false);
+  }
 
-  void _mostrarReportes(Supermercado super_) {
-    final reportes = _reportesDe(super_.id);
+  // ── STATISTICS BOTTOM SHEET ─────────────────────────────────────────────────
+  void _mostrarEstadisticas() {
+    final total = _supermercados.length;
+    final conReportes = _supermercados
+        .where((s) => _filtrarReportes(s['id']).isNotEmpty)
+        .length;
+    final totalReportes = _historialCompletoReportes.length;
 
-    showModalBottomSheet<void>(
+    HapticFeedback.lightImpact();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _EstadisticasSheet(
+        total: total,
+        conReportes: conReportes,
+        totalReportes: totalReportes,
+        theme: _theme,
+      ),
+    );
+  }
+
+  // ── REPORT BOTTOM SHEET ─────────────────────────────────────────────────────
+  void _mostrarReportes(int idSucursal, String nombre) {
+    final reportes = _filtrarReportes(idSucursal);
+    HapticFeedback.mediumImpact();
+    showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => _ReportesBottomSheet(
-        supermercado: super_,
+      builder: (_) => _ReportesSheet(
+        nombre: nombre,
         reportes: reportes,
-        isDarkMode: _isDarkMode,
-        tiempoRelativo: _tiempoRelativo,
-        onRefresh: _recargarDatos,
+        theme: _theme,
       ),
     );
   }
 
-  // ── Build ────────────────────────────────────────────────────────────
+  // ── BUILD ────────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: _buildAppBar(),
-      body: SafeArea(child: _buildBody()),
-      floatingActionButton: _cargando ? null : _buildFAB(),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar() => AppBar(
-        title: const Text('Mapa de Alertas'),
-        actions: [
-          Semantics(
-            label: 'Cambiar tema del mapa',
-            child: IconButton(
-              icon: Icon(_isDarkMode ? Icons.light_mode : Icons.dark_mode),
-              tooltip: _isDarkMode ? 'Modo claro' : 'Modo oscuro',
-              onPressed: () => setState(() => _isDarkMode = !_isDarkMode),
-            ),
-          ),
-        ],
-      );
-
-  Widget _buildBody() {
-    if (_cargando) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    return FlutterMap(
-      mapController: _mapController,
-      options: MapOptions(
-        initialCenter: _ubicacionUsuario,
-        initialZoom: _MapConstants.defaultZoom,
-        minZoom: _MapConstants.minZoom,
-        maxZoom: _MapConstants.maxZoom,
-      ),
-      children: [
-        _buildTileLayer(),
-        _buildMarcadoresSupermercados(),
-        _buildMarcadorUsuario(),
-      ],
-    );
-  }
-
-  TileLayer _buildTileLayer() => TileLayer(
-        urlTemplate:
-            _isDarkMode ? _MapConstants.tileDark : _MapConstants.tileLight,
-        subdomains: _MapConstants.tileSubdomains,
-        userAgentPackageName: _MapConstants.userAgent,
-      );
-
-  MarkerLayer _buildMarcadoresSupermercados() => MarkerLayer(
-        markers: _supermercados.map(_buildMarcadorSupermercado).toList(),
-      );
-
-  Marker _buildMarcadorSupermercado(Supermercado s) {
-    final cantidad = _cantidadReportes(s.id);
-    final color = _colorRiesgo(cantidad);
-    final icono = _iconoSupermercado(s.nombre);
-    final tieneAlerta = cantidad > 0;
-
-    return Marker(
-      point: s.ubicacion,
-      width: 70,
-      height: 70,
-      child: Semantics(
-        label: '${s.nombre}, $cantidad reportes',
-        button: true,
-        child: GestureDetector(
-          onTap: () => _mostrarReportes(s),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 400),
+      color: _theme.background,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
           child: Stack(
-            clipBehavior: Clip.none,
             children: [
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icono, color: color, size: 32),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: _isDarkMode ? Colors.black87 : Colors.white,
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: color),
-                    ),
-                    child: Text(
-                      s.nombre,
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                        color: _isDarkMode ? Colors.white : Colors.black,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
+              // MAP
+              _cargando ? _buildLoadingView() : _buildMap(),
+
+              // HEADER
+              SlideTransition(
+                position: _headerSlide,
+                child: _buildHeader(),
               ),
-              if (tieneAlerta)
+
+              // SEARCH BAR
+              if (_showSearch)
                 Positioned(
-                  top: -5,
-                  right: 5,
-                  child: _BadgeContador(count: cantidad),
+                  top: 70,
+                  left: 16,
+                  right: 16,
+                  child: _buildSearchBar(),
+                ),
+
+              // FILTER CHIPS
+              Positioned(
+                top: _showSearch ? 130 : 70,
+                left: 0,
+                right: 0,
+                child: _buildFilterChips(),
+              ),
+
+              // FABs (bottom right)
+              Positioned(
+                bottom: 24,
+                right: 16,
+                child: FadeTransition(
+                  opacity: _fabAnim,
+                  child: _buildFABs(),
+                ),
+              ),
+
+              // BOTTOM STATS BAR
+              if (!_cargando)
+                Positioned(
+                  bottom: 24,
+                  left: 16,
+                  child: FadeTransition(
+                    opacity: _fabAnim,
+                    child: _buildStatsBar(),
+                  ),
                 ),
             ],
           ),
@@ -417,259 +719,605 @@ class _PantallaMapaState extends State<PantallaMapa> {
     );
   }
 
-  MarkerLayer _buildMarcadorUsuario() => MarkerLayer(
-        markers: [
-          Marker(
-            point: _ubicacionUsuario,
-            width: 40,
-            height: 40,
-            child: Semantics(
-              label: 'Tu ubicación actual',
-              child:
-                  const Icon(Icons.my_location, color: Colors.blue, size: 30),
-            ),
-          ),
-        ],
-      );
-
-  FloatingActionButton _buildFAB() => FloatingActionButton(
-        backgroundColor: Colors.blueAccent,
-        tooltip: 'Centrar en mi ubicación',
-        onPressed: _centrarEnUsuario,
-        child: const Icon(Icons.gps_fixed, color: Colors.white),
-      );
-}
-
-// ─────────────────────────────────────────────
-// WIDGET: Badge contador
-// ─────────────────────────────────────────────
-class _BadgeContador extends StatelessWidget {
-  const _BadgeContador({required this.count});
-  final int count;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(6),
-        decoration: const BoxDecoration(
-          color: Colors.redAccent,
-          shape: BoxShape.circle,
-        ),
-        child: Text(
-          '$count',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      );
-}
-
-// ─────────────────────────────────────────────
-// WIDGET: Bottom Sheet
-// ─────────────────────────────────────────────
-class _ReportesBottomSheet extends StatelessWidget {
-  const _ReportesBottomSheet({
-    required this.supermercado,
-    required this.reportes,
-    required this.isDarkMode,
-    required this.tiempoRelativo,
-    required this.onRefresh,
-  });
-
-  final Supermercado supermercado;
-  final List<dynamic> reportes;
-  final bool isDarkMode;
-  final String Function(String) tiempoRelativo;
-  final Future<void> Function() onRefresh;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color bg = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
-    final Color textColor = isDarkMode ? Colors.white : Colors.black87;
-    final Color subColor = isDarkMode ? Colors.grey.shade400 : Colors.black54;
-
-    return DraggableScrollableSheet(
-      initialChildSize: 0.55,
-      minChildSize: 0.35,
-      maxChildSize: 0.90,
-      expand: false,
-      builder: (_, scrollController) => Container(
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 20,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Center(
+  Widget _buildLoadingView() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedBuilder(
+            animation: _loadingController,
+            builder: (_, __) => Transform.rotate(
+              angle: _loadingController.value * 2 * math.pi,
               child: Container(
-                margin: const EdgeInsets.only(top: 10, bottom: 6),
-                width: 40,
-                height: 4,
+                width: 56,
+                height: 56,
                 decoration: BoxDecoration(
-                  color: subColor.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(2),
+                  shape: BoxShape.circle,
+                  gradient: SweepGradient(
+                    colors: [
+                      _theme.primary,
+                      _theme.primary.withOpacity(0.1),
+                    ],
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: CircleAvatar(backgroundColor: _theme.background),
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 8, 0),
-              child: Row(
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Cargando mapa...',
+            style: TextStyle(
+              color: _theme.textSecondary,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMap() {
+    final filtrados = _supermercadosFiltrados;
+
+    return FlutterMap(
+      mapController: _mapController,
+      options: MapOptions(
+        initialCenter: _ubicacionUsuario,
+        initialZoom: 15.0,
+        interactionOptions: const InteractionOptions(
+          flags: InteractiveFlag.all,
+        ),
+      ),
+      children: [
+        TileLayer(
+          urlTemplate: _theme.tileUrl,
+          subdomains: const ['a', 'b', 'c'],
+          userAgentPackageName: 'com.gate.app',
+        ),
+        // Supermarket markers
+        MarkerLayer(
+          markers: filtrados.map((s) {
+            final count = _filtrarReportes(s['id']).length;
+            final color = _markerColor(count);
+            return Marker(
+              point: LatLng(s['lat'], s['lng']),
+              width: 80,
+              height: 90,
+              child: PulsingMarker(
+                color: color,
+                reportCount: count,
+                name: s['nombre'],
+                isDark: _isDarkMode,
+                onTap: () => _mostrarReportes(s['id'], s['nombre']),
+              ),
+            );
+          }).toList(),
+        ),
+        // User location marker
+        MarkerLayer(
+          markers: [
+            Marker(
+              point: _ubicacionUsuario,
+              width: 40,
+              height: 40,
+              child: const UserLocationMarker(),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHeader() {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: Container(
+        margin: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: _theme.surface.withOpacity(0.96),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: _theme.border),
+          boxShadow: [
+            BoxShadow(
+              color: _theme.cardShadow,
+              blurRadius: 20,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: _theme.primary.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(Icons.shield_rounded, color: _theme.primary, size: 20),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: Text(
-                      supermercado.nombre,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: textColor,
-                      ),
-                      overflow: TextOverflow.ellipsis,
+                  Text(
+                    'Mapa de Alertas',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: _theme.textPrimary,
                     ),
                   ),
-                  TextButton.icon(
-                    onPressed: onRefresh,
-                    icon: const Icon(Icons.refresh, size: 18),
-                    label: const Text('Actualizar'),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.close, color: textColor),
-                    tooltip: 'Cerrar',
-                    onPressed: () => Navigator.pop(context),
+                  Text(
+                    '${_supermercadosFiltrados.length} sucursales visibles',
+                    style: TextStyle(fontSize: 11, color: _theme.textSecondary),
                   ),
                 ],
               ),
             ),
-            Divider(color: subColor.withOpacity(0.3), height: 1),
+            // Search button
+            _HeaderBtn(
+              icon: _showSearch ? Icons.search_off_rounded : Icons.search_rounded,
+              theme: _theme,
+              onTap: () => setState(() {
+                _showSearch = !_showSearch;
+                if (!_showSearch) {
+                  _searchController.clear();
+                  _searchQuery = '';
+                }
+              }),
+            ),
+            const SizedBox(width: 6),
+            // Stats button
+            _HeaderBtn(
+              icon: Icons.bar_chart_rounded,
+              theme: _theme,
+              onTap: _mostrarEstadisticas,
+            ),
+            const SizedBox(width: 6),
+            // Dark mode toggle
+            GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                setState(() => _isDarkMode = !_isDarkMode);
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: _isDarkMode
+                      ? const Color(0xFFF59E0B).withOpacity(0.15)
+                      : const Color(0xFF6366F1).withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  _isDarkMode ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                  color: _isDarkMode
+                      ? const Color(0xFFF59E0B)
+                      : const Color(0xFF6366F1),
+                  size: 18,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return AnimatedOpacity(
+      opacity: _showSearch ? 1.0 : 0.0,
+      duration: const Duration(milliseconds: 200),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: _theme.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _theme.primary.withOpacity(0.4)),
+          boxShadow: [
+            BoxShadow(color: _theme.cardShadow, blurRadius: 12),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.search, color: _theme.textSecondary, size: 18),
+            const SizedBox(width: 8),
             Expanded(
-              child: reportes.isEmpty
-                  ? _EmptyState(color: subColor)
-                  : RefreshIndicator(
-                      onRefresh: onRefresh,
-                      child: ListView.builder(
-                        controller: scrollController,
-                        padding: const EdgeInsets.all(16),
-                        itemCount: reportes.length,
-                        itemBuilder: (_, i) => _TarjetaReporte(
-                          reporte: reportes[i],
-                          isDarkMode: isDarkMode,
-                          textColor: textColor,
-                          subColor: subColor,
-                          tiempoRelativo: tiempoRelativo,
-                        ),
+              child: TextField(
+                controller: _searchController,
+                autofocus: true,
+                style: TextStyle(color: _theme.textPrimary, fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'Buscar sucursal...',
+                  hintStyle: TextStyle(color: _theme.textSecondary),
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                onChanged: (v) => setState(() => _searchQuery = v),
+              ),
+            ),
+            if (_searchQuery.isNotEmpty)
+              GestureDetector(
+                onTap: () => setState(() {
+                  _searchController.clear();
+                  _searchQuery = '';
+                }),
+                child: Icon(Icons.close, color: _theme.textSecondary, size: 18),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChips() {
+    final filters = [
+      ('todos', 'Todos', Icons.apps_rounded),
+      ('con_reportes', 'Con alertas', Icons.warning_amber_rounded),
+      ('sin_reportes', 'Sin alertas', Icons.check_circle_outline_rounded),
+    ];
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: filters.map((f) {
+          final isActive = _filtroActivo == f.$1;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                setState(() => _filtroActivo = f.$1);
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? _theme.primary
+                      : _theme.surface.withOpacity(0.95),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isActive ? _theme.primary : _theme.border,
+                  ),
+                  boxShadow: isActive
+                      ? [BoxShadow(color: _theme.primary.withOpacity(0.3), blurRadius: 8)]
+                      : [],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      f.$3,
+                      size: 13,
+                      color: isActive ? Colors.white : _theme.textSecondary,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      f.$2,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isActive ? Colors.white : _theme.textSecondary,
                       ),
                     ),
+                  ],
+                ),
+              ),
             ),
-            SizedBox(height: MediaQuery.of(context).padding.bottom),
-          ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildFABs() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Refresh
+        _MapFAB(
+          icon: Icons.refresh_rounded,
+          theme: _theme,
+          onTap: _refrescar,
+          small: true,
+        ),
+        const SizedBox(height: 10),
+        // Center on user
+        _MapFAB(
+          icon: Icons.my_location_rounded,
+          theme: _theme,
+          onTap: _centrarEnUsuario,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatsBar() {
+    final conAlertas = _supermercados
+        .where((s) => _filtrarReportes(s['id']).isNotEmpty)
+        .length;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: _theme.surface.withOpacity(0.95),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _theme.border),
+        boxShadow: [
+          BoxShadow(color: _theme.cardShadow, blurRadius: 10),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _StatChip(
+            icon: Icons.store_rounded,
+            label: '${_supermercados.length}',
+            color: _theme.primary,
+            isDark: _isDarkMode,
+          ),
+          const SizedBox(width: 6),
+          _StatChip(
+            icon: Icons.warning_rounded,
+            label: '$conAlertas',
+            color: _theme.danger,
+            isDark: _isDarkMode,
+          ),
+          const SizedBox(width: 6),
+          _StatChip(
+            icon: Icons.report_rounded,
+            label: '${_historialCompletoReportes.length}',
+            color: _theme.warning,
+            isDark: _isDarkMode,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── HEADER BUTTON ──────────────────────────────────────────────────────────
+
+class _HeaderBtn extends StatelessWidget {
+  final IconData icon;
+  final MapTheme theme;
+  final VoidCallback onTap;
+
+  const _HeaderBtn({
+    required this.icon,
+    required this.theme,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: theme.surfaceVariant,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, color: theme.textSecondary, size: 18),
+      ),
+    );
+  }
+}
+
+// ─── MAP FAB ────────────────────────────────────────────────────────────────
+
+class _MapFAB extends StatefulWidget {
+  final IconData icon;
+  final MapTheme theme;
+  final VoidCallback onTap;
+  final bool small;
+
+  const _MapFAB({
+    required this.icon,
+    required this.theme,
+    required this.onTap,
+    this.small = false,
+  });
+
+  @override
+  State<_MapFAB> createState() => _MapFABState();
+}
+
+class _MapFABState extends State<_MapFAB> with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 120),
+    );
+    _scale = Tween<double>(begin: 1, end: 0.88)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final size = widget.small ? 40.0 : 50.0;
+    return GestureDetector(
+      onTapDown: (_) => _ctrl.forward(),
+      onTapUp: (_) {
+        _ctrl.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () => _ctrl.reverse(),
+      child: AnimatedBuilder(
+        animation: _scale,
+        builder: (_, __) => Transform.scale(
+          scale: _scale.value,
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: widget.theme.surface,
+              shape: BoxShape.circle,
+              border: Border.all(color: widget.theme.border),
+              boxShadow: [
+                BoxShadow(
+                  color: widget.theme.cardShadow,
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Icon(
+              widget.icon,
+              color: widget.theme.primary,
+              size: widget.small ? 18 : 22,
+            ),
+          ),
         ),
       ),
     );
   }
 }
 
-// ─────────────────────────────────────────────
-// WIDGET: Tarjeta de reporte con imagen
-// ─────────────────────────────────────────────
-class _TarjetaReporte extends StatelessWidget {
-  const _TarjetaReporte({
-    required this.reporte,
-    required this.isDarkMode,
-    required this.textColor,
-    required this.subColor,
-    required this.tiempoRelativo,
-  });
+// ─── ESTADÍSTICAS SHEET ──────────────────────────────────────────────────────
 
-  final dynamic reporte;
-  final bool isDarkMode;
-  final Color textColor;
-  final Color subColor;
-  final String Function(String) tiempoRelativo;
+class _EstadisticasSheet extends StatelessWidget {
+  final int total;
+  final int conReportes;
+  final int totalReportes;
+  final MapTheme theme;
+
+  const _EstadisticasSheet({
+    required this.total,
+    required this.conReportes,
+    required this.totalReportes,
+    required this.theme,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final reporteId = reporte['id'];
-    final idThief = reporte['id_thief']?.toString() ?? '—';
-    final descripcion = reporte['description']?.toString() ?? 'Sin descripción';
-    final fechaStr = reporte['date']?.toString() ?? '';
-    final fecha = tiempoRelativo(fechaStr);
+    final sinReportes = total - conReportes;
 
-    return Card(
-      color: isDarkMode ? const Color(0xFF2C2C2C) : Colors.white,
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: isDarkMode ? 0 : 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: isDarkMode ? Colors.white12 : Colors.black12,
-        ),
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: theme.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Icon(Icons.bar_chart_rounded, color: theme.primary),
+              const SizedBox(width: 10),
+              Text(
+                'Resumen del Mapa',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: theme.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(child: _StatCard(label: 'Sucursales', value: '$total', icon: Icons.store_rounded, color: theme.primary, theme: theme)),
+              const SizedBox(width: 12),
+              Expanded(child: _StatCard(label: 'Con alertas', value: '$conReportes', icon: Icons.warning_rounded, color: theme.danger, theme: theme)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: _StatCard(label: 'Sin alertas', value: '$sinReportes', icon: Icons.check_circle_rounded, color: theme.success, theme: theme)),
+              const SizedBox(width: 12),
+              Expanded(child: _StatCard(label: 'Reportes totales', value: '$totalReportes', icon: Icons.report_rounded, color: theme.warning, theme: theme)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+  final MapTheme theme;
+
+  const _StatCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Imagen del reporte
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-            child: Image.network(
-              '$baseUrl/reportes/$reporteId/imagen',
-              headers: {'Authorization': 'Bearer $userToken'},
-              height: 180,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              // Si no hay imagen simplemente no muestra nada
-              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-              loadingBuilder: (_, child, progress) {
-                if (progress == null) return child;
-                return const SizedBox(
-                  height: 180,
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              },
+          Icon(icon, color: color, size: 22),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
           ),
-          // Datos del reporte
-          ListTile(
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            leading: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.redAccent.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.warning_rounded,
-                  color: Colors.redAccent, size: 28),
-            ),
-            title: Text(
-              'Persona ID: $idThief',
-              style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
-            ),
-            subtitle: Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.schedule, size: 13, color: subColor),
-                      const SizedBox(width: 4),
-                      Text(fecha,
-                          style: TextStyle(color: subColor, fontSize: 12)),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(descripcion, style: TextStyle(color: subColor)),
-                ],
-              ),
-            ),
-            isThreeLine: true,
+          Text(
+            label,
+            style: TextStyle(fontSize: 12, color: theme.textSecondary),
           ),
         ],
       ),
@@ -677,32 +1325,250 @@ class _TarjetaReporte extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────
-// WIDGET: Estado vacío
-// ─────────────────────────────────────────────
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.color});
-  final Color color;
+// ─── REPORTES SHEET ──────────────────────────────────────────────────────────
+
+class _ReportesSheet extends StatelessWidget {
+  final String nombre;
+  final List<dynamic> reportes;
+  final MapTheme theme;
+
+  const _ReportesSheet({
+    required this.nombre,
+    required this.reportes,
+    required this.theme,
+  });
 
   @override
-  Widget build(BuildContext context) => Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.check_circle_outline,
-                size: 56, color: Colors.green.shade400),
-            const SizedBox(height: 12),
-            Text(
-              'Sin reportes recientes',
-              style: TextStyle(
-                  color: color, fontSize: 16, fontWeight: FontWeight.w500),
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.65,
+      decoration: BoxDecoration(
+        color: theme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        children: [
+          // Handle
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: theme.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              'Esta sucursal está tranquila por ahora.',
-              style: TextStyle(color: color.withOpacity(0.7), fontSize: 13),
+          ),
+
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 12, 0),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: theme.danger.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.store_rounded, color: theme.danger, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        nombre,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: theme.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        '${reportes.length} reporte${reportes.length != 1 ? 's' : ''}',
+                        style: TextStyle(fontSize: 12, color: theme.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.close, color: theme.textSecondary),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
             ),
-          ],
-        ),
-      );
+          ),
+
+          Divider(color: theme.border, height: 24),
+
+          // List
+          Expanded(
+            child: reportes.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check_circle_outline_rounded,
+                            size: 48, color: theme.success.withOpacity(0.5)),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Sin reportes recientes',
+                          style: TextStyle(
+                            color: theme.textSecondary,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Esta sucursal está tranquila',
+                          style: TextStyle(
+                            color: theme.textSecondary.withOpacity(0.6),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    itemCount: reportes.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (context, i) {
+                      final r = reportes[i];
+                      final idThief = r["id_thief"] ?? '—';
+                      final descripcion = r["description"] ?? "Sin descripción";
+                      final fechaApi = r["date"]?.toString() ?? "";
+                      final fecha = fechaApi.length > 16
+                          ? fechaApi.substring(0, 16)
+                          : "Sin fecha";
+
+                      return TweenAnimationBuilder<double>(
+                        duration: Duration(milliseconds: 300 + i * 60),
+                        tween: Tween(begin: 0, end: 1),
+                        curve: Curves.easeOut,
+                        builder: (_, v, child) => Opacity(
+                          opacity: v,
+                          child: Transform.translate(
+                            offset: Offset(0, 20 * (1 - v)),
+                            child: child,
+                          ),
+                        ),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: theme.surfaceVariant,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: theme.border),
+                          ),
+                          child: Row(
+                            children: [
+                              // Image
+                              ClipRRect(
+                                borderRadius: const BorderRadius.horizontal(
+                                    left: Radius.circular(14)),
+                                child: SizedBox(
+                                  width: 72,
+                                  height: 80,
+                                  child: Image.network(
+                                    '$baseUrl/reportes/${r["id"]}/imagen',
+                                    fit: BoxFit.cover,
+                                    headers: {'Authorization': 'Bearer $userToken'},
+                                    errorBuilder: (_, __, ___) => Container(
+                                      color: theme.danger.withOpacity(0.1),
+                                      child: Icon(Icons.broken_image_rounded,
+                                          color: theme.danger.withOpacity(0.5), size: 28),
+                                    ),
+                                    loadingBuilder: (_, child, progress) {
+                                      if (progress == null) return child;
+                                      return Container(
+                                        color: theme.surfaceVariant,
+                                        child: Center(
+                                          child: SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: theme.primary,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                              // Info
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 12),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 7, vertical: 3),
+                                            decoration: BoxDecoration(
+                                              color: theme.danger.withOpacity(0.12),
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              'ID: $idThief',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: theme.danger,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        descripcion,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: theme.textPrimary,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Row(
+                                        children: [
+                                          Icon(Icons.access_time_rounded,
+                                              size: 11, color: theme.textSecondary),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            fecha,
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: theme.textSecondary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
 }

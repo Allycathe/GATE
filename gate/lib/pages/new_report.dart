@@ -102,7 +102,6 @@ class _ReportPageState extends State<NewReport> {
         description: descripcionFinal,
         idSupermarket: 1,
         imagen: _imagenSeleccionada, // <-- imagen opcional
-        idReporter: userId,
       );
 
       final nuevoReporte = {

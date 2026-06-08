@@ -1,13 +1,11 @@
 // lib/debug.dart
 import 'package:flutter/material.dart';
-import 'package:gate/pages/profile.dart';
-
+import 'package:gate/main.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../config.dart';
 import '../custom_widgets/navbar.dart';
-
 
 final route = "$baseUrl/auth/login";
 
@@ -34,8 +32,6 @@ Future<void> getUserInfo(int id, String token) async {
 
   userName = data["name"];
   userLastName = data["last_name"];
-  userIsAdmin = data["isadmin"];
-  userSupermarketId = data["id_supermarket"];
 }
 
 Future<void> login(BuildContext context) async {
@@ -58,16 +54,15 @@ Future<void> login(BuildContext context) async {
       userToken = data["token"];
       userId = data["usuario"]["id"];
       userEmail = data["usuario"]["email"];
-      
 
       print("TOKEN: $userToken ID: $userId");
 
-      await getUserInfo(userId, userToken);
+      getUserInfo(userId, userToken);
 
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => const ProfilePage(),
+          builder: (context) => const MiAppMapa(),
         ),
       );
     }
@@ -113,12 +108,10 @@ class LoginPage extends StatelessWidget {
               ),
               ColoredBox(
                   color: Colors.white,
-                  child: 
-                  Padding(
-                    padding: const EdgeInsets.all(50),
-                    child: 
-                    Column(// Textos
-                      children: [
+                  child: Padding(
+                      padding: const EdgeInsets.all(50),
+                      child: Column(// Textos
+                          children: [
                         const SizedBox(height: 10),
                         const Text("Bienvenido", style: titleTextStyle),
                         const SizedBox(height: 30),

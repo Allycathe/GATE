@@ -1,23 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:gate/pages/encargado.dart';
 
 import '../config.dart';
 import '../custom_widgets/option_menu.dart';
 import '../custom_widgets/navbar.dart';
 
-import 'user_options.dart';
+import '/pages/debug.dart';
 
+// Variables: (Estaticas por el moment)
 String rol = "";
-String definirRol(bool isAdmin) {
-  return isAdmin ? "Encargado" : "Guardia";
+
+void definirRol(bool isAdmin){
+  if (isAdmin){
+    rol = "Encargado";
+  }
+  else {
+    rol = "Guardia";
+  }
 }
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
   
+
   @override
   Widget build(BuildContext context) {
-    rol = definirRol(userIsAdmin);
+    definirRol(userIsAdmin);
     return Scaffold(
       appBar: const CustomAppBar(),
       body: 
@@ -59,20 +66,10 @@ class ProfilePage extends StatelessWidget {
             const SizedBox(height: 20,),
             FilledButton(
               onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => UserOptions()));
+                Navigator.push(context, MaterialPageRoute(builder: (context) => debug()));
               },
               style: FilledButton.styleFrom(backgroundColor: buttonColor, padding: EdgeInsets.all(16)),
-              child: const Text("Opciones")
-            ), 
-            SizedBox(height: 20),
-            if (userIsAdmin)
-              FilledButton(
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => AdminPage()));
-              },
-              style: FilledButton.styleFrom(backgroundColor: adminInterfaceColor, padding: EdgeInsets.all(16)),
-              child: Text("Opciones de administrador", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold))
-              ), 
+              child: const Text("Opciones")), 
 
             //const SizedBox(height: 100), // Espacio entre el texto y los botones inferiores
 
