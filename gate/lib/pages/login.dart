@@ -1,6 +1,7 @@
 // lib/debug.dart
 import 'package:flutter/material.dart';
-import 'package:gate/main.dart';
+import 'package:gate/pages/profile.dart';
+
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -32,6 +33,8 @@ Future<void> getUserInfo(int id, String token) async {
 
   userName = data["name"];
   userLastName = data["last_name"];
+  userIsAdmin = data["isadmin"];
+  userSupermarketId = data["id_supermarket"];
 }
 
 Future<void> login(BuildContext context) async {
@@ -57,12 +60,12 @@ Future<void> login(BuildContext context) async {
 
       print("TOKEN: $userToken ID: $userId");
 
-      getUserInfo(userId, userToken);
+      await getUserInfo(userId, userToken);
 
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => const MiAppMapa(),
+          builder: (context) => const ProfilePage(),
         ),
       );
     }
