@@ -68,3 +68,6 @@ desktop.ini
 # Docker
 # ========================
 docker-compose.override.yml
+
+
+/gate/android/local.properties
