@@ -145,6 +145,7 @@ class LoginPage extends StatelessWidget {
                                   }),
                               TextFormField(
                                   // password form
+                                  obscureText: true,
                                   decoration: const InputDecoration(
                                     labelText: "Ingresar contraseña",
                                     hintText: "ej: $examplePassword",

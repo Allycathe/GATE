@@ -7,13 +7,9 @@ import 'package:http/http.dart' as http;
 
 import '../custom_widgets/navbar.dart';
 
-bool isAdmin = false;
-
 const emptyTextForm = "Campo vacio";
-//var editUserId = 0; // Yo lo añadi
 
 class EditUserPage extends StatefulWidget {
-
   final int editUserId;
 
   const EditUserPage({
@@ -21,14 +17,12 @@ class EditUserPage extends StatefulWidget {
     required this.editUserId,
   });
 
-  
-
   @override
   State<EditUserPage> createState() => _EditUserPage();
 }
 
 class _EditUserPage extends State<EditUserPage> {
-
+  bool isAdmin = false;
   final formkey = GlobalKey<FormState>();
 
   final nombreController = TextEditingController();
@@ -46,7 +40,7 @@ class _EditUserPage extends State<EditUserPage> {
       },
     );
 
-    print(response.body);
+    print(response.body); // DEBUG
 
     final data = jsonDecode(response.body);
 
@@ -57,6 +51,8 @@ class _EditUserPage extends State<EditUserPage> {
       emailController.text = data["email"];
 
       isAdmin = data["isadmin"];
+      print("Usuario es originalmente admin?:"); // DEBUG
+      print(isAdmin);
     });
   }
   @override
@@ -74,8 +70,9 @@ class _EditUserPage extends State<EditUserPage> {
   }
 
   Future<void> submitUser() async {
+    print("Valor de isadmin antes de mandarlo:");
+    print(isAdmin);
     try {
-
       final response = await http.put(
 
         Uri.parse("$baseUrl/usuarios/${widget.editUserId}"),
@@ -90,11 +87,11 @@ class _EditUserPage extends State<EditUserPage> {
           "name": nombreController.text,
           "last_name": apellidoController.text,
           "email": emailController.text,
-          "password": pwController.text,
           "isadmin": isAdmin,
+          if (pwController.text.isNotEmpty) "password": pwController.text,
         }),
       );
-
+      print("Datos enviados a backend");
       print(response.body);
 
       // EXITOSO
@@ -283,20 +280,12 @@ class _EditUserPage extends State<EditUserPage> {
                         TextFormField(
 
                           controller: pwController,
-
                           decoration: const InputDecoration(
                             labelText: "Ingresar contraseña",
-                            hintText: "ej: 你好世界",
+                            hintText: "Dejar vacío para no cambiar",
                           ),
 
-                          validator: (value) {
-
-                            if (value == null || value.isEmpty) {
-                              return emptyTextForm;
-                            }
-
-                            return null;
-                          },
+                          validator: (value) => null,
                         ),
 
                         const SizedBox(height: 30),
@@ -310,7 +299,6 @@ class _EditUserPage extends State<EditUserPage> {
                           value: isAdmin,
 
                           onChanged: (value) {
-
                             setState(() {
                               isAdmin = value;
                             });
