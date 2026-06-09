@@ -8,17 +8,11 @@ import 'login.dart';
 void logout(BuildContext context) {
   // Limpiar sesión
   userToken = "";
-
   userId = 0;
-
   userEmail = "";
-
   userName = "";
-
   userLastName = "";
-
   userIsAdmin = false;
-
   userSupermarketId = 0;
 
   // Volver login
