@@ -1,5 +1,6 @@
 // lib/debug.dart
 import 'package:flutter/material.dart';
+import 'package:gate/pages/password_recovery.dart';
 import 'package:gate/pages/profile.dart';
 
 import 'dart:convert';
@@ -51,8 +52,7 @@ Future<void> login(BuildContext context) async {
       }),
     );
 
-    // LOGIN EXITOSO
-    if (response.statusCode == 200) {
+    if (response.statusCode == 200) { // LOGIN EXITOSO
       final data = jsonDecode(response.body);
 
       userToken = data["token"];
@@ -71,12 +71,17 @@ Future<void> login(BuildContext context) async {
         ),
       );
     }
-
-    // ERROR LOGIN
-    else {
+    else if (response.statusCode == 401) { // Error Credenciales
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Credenciales invalidas"),
+        ),
+      );
+    }
+    else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Error al llamar a la base de datos"),
         ),
       );
     }
@@ -168,8 +173,38 @@ class LoginPage extends StatelessWidget {
                             onPressed: () {
                               submit();
                             },
-                            child: const Text("Ingresar al sistema"))
-                      ])))
-            ]))));
+                            child: const Text("Ingresar al sistema")
+                        ),
+                        SizedBox(height: 60),
+                        TextButton(
+                          onPressed: () => {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const PwRecoveryPage(),
+                              ),
+                            )
+                          },
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero, // Simular que es un link jijiji
+                          ),
+                          child: const Text(
+                            'Recuperar contraseña',
+                            style: TextStyle(
+                              color: Colors.blue,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        )
+
+                      ]
+                    )
+                  )
+                )
+            ]  
+          )
+        )
+      )
+    );
   }
 }
