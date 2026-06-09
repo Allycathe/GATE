@@ -46,7 +46,6 @@ class PantallaInicio extends StatelessWidget {
             ),
             const SizedBox(height: 40),
             const Text("Bienvenido a GATE", style: titleTextStyle),
-            const Text("TAMAÑO DE MI=============================================================PENE"),
             const SizedBox(
               height: 50,
             ),

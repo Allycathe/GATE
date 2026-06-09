@@ -205,52 +205,44 @@ class _EditReportPage extends State<EditReportPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const CustomAppBar(),
-      body: Center(
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              margin: const EdgeInsets.all(20),
-
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.black),
-              ),
-
-              child: Column(
-
-                children: [
-
-                  Text(
-                    "Formulario para Modificar Reporte",
-                    style: titleTextStyle,
+      body: _cargando
+          ? const Center(child: CircularProgressIndicator())
+          : Center(
+              child: SingleChildScrollView(
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  margin: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.black),
                   ),
-
-                  const SizedBox(height: 40),
-
-                  Form(
-
-                    key: formkey,
-
-                    child: Column(
-
-                      children: [
-
-                        TextFormField(
-                          controller: descriptionController,
-                          decoration: const InputDecoration(
-                            labelText: "Ingresar descripción",
-                            hintText: "ej: Robo de productos",
-                          ),
-
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return emptyTextForm;
-                            }
-                            return null;
-                          },
-                        ),
-
-                        const SizedBox(height: 20),
+                  child: Column(
+                    children: [
+                      Text(
+                        "Modificar Reporte",
+                        style: titleTextStyle,
+                      ),
+                      const SizedBox(height: 40),
+                      Form(
+                        key: formkey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            TextFormField(
+                              controller: descriptionController,
+                              maxLines: 3,
+                              decoration: const InputDecoration(
+                                labelText: "Descripción",
+                                border: OutlineInputBorder(),
+                                hintText: "ej: Robo de productos",
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return emptyTextForm;
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 20),
                             const Text(
                               "Imagen o evidencia",
                               style: TextStyle(fontWeight: FontWeight.bold),
@@ -258,71 +250,63 @@ class _EditReportPage extends State<EditReportPage> {
                             const SizedBox(height: 8),
                             _buildImagePreview(),
                             const SizedBox(height: 10),
-
-                        Row(
-                          children: [
-                            FilledButton.icon(
-                              onPressed: () => seleccionarImagen(ImageSource.camera),
-                              icon: const Icon(Icons.camera_alt),
-                              label: const Text("Cámara"),
+                            Row(
+                              children: [
+                                FilledButton.icon(
+                                  onPressed: () =>
+                                      seleccionarImagen(ImageSource.camera),
+                                  icon: const Icon(Icons.camera_alt),
+                                  label: const Text("Cámara"),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: buttonColor,
+                                    padding: const EdgeInsets.all(14),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                FilledButton.icon(
+                                  onPressed: () =>
+                                      seleccionarImagen(ImageSource.gallery),
+                                  icon: const Icon(Icons.photo_library),
+                                  label: const Text("Galería"),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: buttonColor,
+                                    padding: const EdgeInsets.all(14),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 40),
+                            FilledButton(
                               style: FilledButton.styleFrom(
-                                backgroundColor: buttonColor,
-                                padding: const EdgeInsets.all(14),
+                                backgroundColor: interfaceColor,
+                                padding: const EdgeInsets.all(16),
+                              ),
+                              onPressed: submit,
+                              child: const Text(
+                                "Guardar cambios",
+                                style: TextStyle(fontSize: 15),
                               ),
                             ),
-                            const SizedBox(width: 10),
-                            FilledButton.icon(
-                              onPressed: () => seleccionarImagen(ImageSource.gallery),
-                              icon: const Icon(Icons.photo_library),
-                              label: const Text("Galería"),
+                            const SizedBox(height: 20),
+                            FilledButton(
                               style: FilledButton.styleFrom(
                                 backgroundColor: buttonColor,
-                                padding: const EdgeInsets.all(14),
+                                padding: const EdgeInsets.all(16),
+                              ),
+                              onPressed: deleteReport,
+                              child: const Text(
+                                "Eliminar reporte",
+                                style: TextStyle(fontSize: 15),
                               ),
                             ),
                           ],
                         ),
-
-                        const SizedBox(height: 40),
-
-                        FilledButton(
-
-                          style: FilledButton.styleFrom(
-                            backgroundColor: interfaceColor,
-                            padding: const EdgeInsets.all(16),
-                          ),
-
-                          onPressed: submit,
-
-                          child: const Text(
-                            "Guardar cambios",
-                            style: TextStyle(fontSize: 15),
-                          ),
-                        ),
-                        SizedBox(height: 20,),
-                        FilledButton(
-
-                          style: FilledButton.styleFrom(
-                            backgroundColor: buttonColor,
-                            padding: const EdgeInsets.all(16),
-                          ),
-
-                          onPressed: deleteReport,
-
-                          child: const Text(
-                            "Eliminar reporte",
-                            style: TextStyle(fontSize: 15),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
-          ],
-        ),
-      ),
     );
   }
 }
