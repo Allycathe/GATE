@@ -61,7 +61,7 @@ module.exports = (pool) => {
   // POST /usuarios  →  crear guardia, el admin envía id_supermarket en el body
   // ─────────────────────────────────────────────────────────────────────────────
   router.post('/', isAdmin(pool), async (req, res) => {
-    const { name, last_name, email, password, id_supermarket } = req.body;
+    const { name, last_name, email, password, id_supermarket, isadmin } = req.body;
 
     if (!name || !email || !password || !id_supermarket)
       return res.status(400).json({ error: 'Faltan campos obligatorios: name, email, password, id_supermarket' });
@@ -70,9 +70,7 @@ module.exports = (pool) => {
     // Evita que un admin cree guardias en supermercados ajenos
     if (parseInt(id_supermarket) !== adminSupermarket(req))
       return res.status(403).json({ error: 'No puedes crear usuarios en otro supermercado' });
-
-    // Los admins no pueden crear otros admins desde esta ruta
-    const isadmin = false;
+  
 
     try {
       const hashedPassword = await bcrypt.hash(password, 10);
