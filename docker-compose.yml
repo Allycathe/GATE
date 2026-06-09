@@ -22,6 +22,8 @@ services:
     - "${PORT}:${PORT}"
     depends_on:
       - db
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
       PORT: ${PORT}
@@ -29,6 +31,7 @@ services:
     volumes:
       - ./backend:/usr/src/app
       - /usr/src/app/node_modules
+      - ./secrets/firebase-service-account.json:/usr/src/app/firebase-service-account.json:ro
     networks:
       - app-network
 

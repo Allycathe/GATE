@@ -3,6 +3,7 @@ const express = require('express');
 const morgan = require('morgan');
 const { pool, comprobarConexion } = require('./src/db');
 const { init: initFaceService } = require('./src/services/faceService');
+const { startListener } = require('./src/services/notificationListener');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -44,4 +45,5 @@ app.use('/reportes', require('./src/routes/reportes')(pool));
 
 app.listen(port, '0.0.0.0', () => {
   console.log(`Servidor corriendo en puerto ${port}`);
+  startListener();
 });
