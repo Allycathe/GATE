@@ -163,7 +163,7 @@ class _ReportsPageState extends State<ReportsPage> {
                           else
                             ...reportes.map((reporte) {
                               final id = reporte["id"];
-                              final idThief = reporte["id_thief"];
+                              final nombreSospechoso = reporte["nombre_sospechoso"];
                               final descripcion =
                                   reporte["description"] ?? "Sin descripción";
                               final fecha = formatearFecha(reporte["date"]);
@@ -192,7 +192,7 @@ class _ReportsPageState extends State<ReportsPage> {
                                             ),
                                             const SizedBox(height: 4),
                                             Text(
-                                                "ID persona reportada: $idThief"),
+                                                "Nombre de persona reportada: $nombreSospechoso"),
                                             Text(
                                                 "ID supermercado: $idSupermarket"),
                                             Text("Fecha: $fecha"),

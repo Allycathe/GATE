@@ -29,10 +29,11 @@ class _EditReportPage extends State<EditReportPage> {
   String? _imagenActualUrl;    // imagen que ya tenía el reporte (base64 o url)
 
   final formkey = GlobalKey<FormState>();
+
+  final nombreSospechosoController = TextEditingController();
   final descriptionController = TextEditingController();
 
   // Campos que se cargan del reporte existente
-  int _idThief = 0;
   int _idSupermarket = 0;
 
   bool _cargando = true;
@@ -49,7 +50,7 @@ class _EditReportPage extends State<EditReportPage> {
 
     setState(() {
       descriptionController.text = data["description"] ?? "";
-      _idThief = data["id_thief"] ?? 0;
+      nombreSospechosoController.text = data["nombre_sospechoso"] ?? "";
       _idSupermarket = data["id_supermarket"] ?? 0;
       _imagenActualUrl = data["image"]; // null si no tiene imagen
       _cargando = false;
@@ -62,6 +63,7 @@ class _EditReportPage extends State<EditReportPage> {
   }
   @override
   void dispose() {
+    nombreSospechosoController.dispose();
     descriptionController.dispose();
     super.dispose();
   }
@@ -70,7 +72,7 @@ class _EditReportPage extends State<EditReportPage> {
     try {
       await ReportService.actualizarReporte(
         id: widget.editReportId,
-        idThief: _idThief,
+        nombreSospechoso: nombreSospechosoController.text,
         description: descriptionController.text,
         idSupermarket: _idSupermarket,
         imagen: _imagenNueva,            // null si no cambió
@@ -227,6 +229,24 @@ class _EditReportPage extends State<EditReportPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            TextFormField(
+                              controller: nombreSospechosoController,
+                              maxLines: 3,
+                              decoration: const InputDecoration(
+                                labelText: "Nombre del sospechoso",
+                                border: OutlineInputBorder(),
+                                hintText: "ej: Felipe Roa",
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return emptyTextForm;
+                                }
+                                return null;
+                              },
+                            ),
+
+                            SizedBox(height: 20),
+
                             TextFormField(
                               controller: descriptionController,
                               maxLines: 3,

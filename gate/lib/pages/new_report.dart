@@ -31,29 +31,15 @@ class _ReportPageState extends State<NewReport> {
   File? _imagenSeleccionada;
   final ImagePicker _picker = ImagePicker();
 
-  final String nombreUsuario = "Alonso Iturrianda";
-  final String supermercadoUsuario = "Unimarc";
+  final String nombreUsuario = ""; // Borrar los hardcodeados
+  final String supermercadoUsuario = "";
   final String rolUsuario = "Guardia";
 
   String descripcion = "";
   bool noExisteNombre = false;
 
   final List<Map<String, String>> reportes = [
-    {
-      "persona": "Juan escobar",
-      "supermercado": "Unimarc",
-      "reportadoPor": "Alonso iturra",
-      "fecha": "2026-05-11 18:40",
-      "descripcion": "Persona observada ocultando productos en una mochila.",
-    },
-    {
-      "persona": "Persona no identificada",
-      "supermercado": "Unimarc",
-      "reportadoPor": "Alonso iturra",
-      "fecha": "2026-05-10 16:15",
-      "descripcion":
-          "Intentó salir del local sin pagar productos de higiene personal.",
-    },
+
   ];
 
   String obtenerFechaActual() {
@@ -94,11 +80,11 @@ class _ReportPageState extends State<NewReport> {
       nombreFinal = nombreController.text.trim();
     }
 
-    final descripcionFinal = "$nombreFinal - $descripcion";
+    final descripcionFinal = descripcion; // Quitar nombre de la descripcion
 
     try {
       await ReportService.crearReporte(
-        idThief: 1,
+        nombreSospechoso: nombreFinal,
         description: descripcionFinal,
         idSupermarket: 1,
         imagen: _imagenSeleccionada, // <-- imagen opcional
@@ -365,6 +351,7 @@ class _ReportPageState extends State<NewReport> {
                     "Reportado por: ${reporte["reportadoPor"]}\n"
                     "Fecha: ${reporte["fecha"]}\n"
                     "Descripción: ${reporte["descripcion"]}",
+                    //"Nombre del sospechoso: " ${reporte["nombre"]}, // VER
                   ),
                 ),
               );

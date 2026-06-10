@@ -85,7 +85,7 @@ class MisReportes extends StatelessWidget {
                                 Padding(
                                   padding: EdgeInsets.all(8.0),
                                   child: Text(
-                                    "ID Sospechoso",
+                                    "Persona Reportada",
                                     style: TextStyle(fontWeight: FontWeight.bold),
                                   ),
                                 ),
@@ -170,7 +170,7 @@ class MisReportes extends StatelessWidget {
                                                     ),
                                                     Padding(
                                                       padding: EdgeInsets.all(8),
-                                                      child: Text("${reporte["id_thief"]}"),
+                                                      child: Text("${reporte["nombre_sospechoso"]}"),
                                                     ),
                                                     Padding(
                                                       padding: EdgeInsets.all(8),
