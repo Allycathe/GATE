@@ -64,5 +64,70 @@ async function evaluateCrimeAlert(pool, newReport, options = {}) {
 
   return alertResult.rows[0];
 }
+/**
+ * Notifica a guardias de supermercados cercanos cuando se sube un reporte.
+ * Dispara inmediatamente con un solo reporte.
+ *
+ * @param {object} pool        - Pool de PostgreSQL
+ * @param {object} newReport   - { id, id_supermarket }
+ * @param {object} messaging   - Firebase Admin Messaging instance
+ * @param {object} options     - { radiusKm = 10 }
+ */
+async function notifyNearbyGuards(pool, newReport, messaging, options = {}) {
+  const { radiusKm = 10 } = options;
 
-module.exports = { evaluateCrimeAlert };
+  // 1. Coordenadas del supermercado del reporte
+  const smResult = await pool.query(
+    'SELECT id, name, location_x AS lat, location_y AS lon FROM supermarket WHERE id = $1',
+    [newReport.id_supermarket]
+  );
+  if (smResult.rowCount === 0) return;
+  const center = smResult.rows[0];
+
+  // 2. Supermercados dentro del radio
+  const allSm = await pool.query(
+    'SELECT id, location_x AS lat, location_y AS lon FROM supermarket'
+  );
+  const nearbySmIds = allSm.rows
+    .filter((sm) => haversine(center.lat, center.lon, sm.lat, sm.lon) <= radiusKm)
+    .map((sm) => sm.id);
+
+  if (nearbySmIds.length === 0) return;
+
+  // 3. FCM tokens de usuarios en esos supermercados
+  const usersResult = await pool.query(
+    `SELECT fcm_token FROM users
+     WHERE id_supermarket = ANY($1::int[])
+     AND fcm_token IS NOT NULL`,
+    [nearbySmIds]
+  );
+
+  const tokens = usersResult.rows.map((u) => u.fcm_token);
+  if (tokens.length === 0) {
+    console.log('[NearbyGuards] No hay usuarios con FCM token en el radio');
+    return;
+  }
+
+  // 4. Enviar notificación
+  const message = {
+    notification: {
+      title: '🚨 Mechero detectado cerca',
+      body: `Nuevo reporte en supermercado ${center.name} — radio ${radiusKm} km`,
+    },
+    data: {
+      report_id: String(newReport.id),
+      supermarket_id: String(newReport.id_supermarket),
+      type: 'nearby_thief',
+    },
+    tokens,
+  };
+
+  try {
+    const response = await messaging.sendEachForMulticast(message);
+    console.log(`[NearbyGuards] ✅ ${response.successCount}/${tokens.length} notificaciones enviadas`);
+  } catch (err) {
+    console.error('[NearbyGuards] ❌ Error enviando notificaciones:', err.message);
+  }
+}
+
+module.exports = { evaluateCrimeAlert, notifyNearbyGuards };
