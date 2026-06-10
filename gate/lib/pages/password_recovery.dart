@@ -19,7 +19,10 @@ class PwRecoveryPage extends StatelessWidget {
               SizedBox(height: 40),
 
               Text("data")
-              
+              // Enviar el correo por formulario en la app para despues en backend recibirlo (POST)
+              // Backend al recibir, crea un codigo y envia un email al correo ingresado
+              // Luego en la app se registra el codigo, y si es correcto -> iniciar formulario para cambiar contraseña
+              // Despues de cambiar -> volver a pagina de login 
             ],
           ),
         )
