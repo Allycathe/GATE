@@ -1565,7 +1565,7 @@ class _ReportesSheet extends StatelessWidget {
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, i) {
                       final r = reportes[i];
-                      final idThief = r["id_thief"] ?? '—';
+                      final nombreSospechoso = r["nombre_sospechoso"] ?? '—';
                       final descripcion = r["description"] ?? "Sin descripción";
                       final fechaApi = r["date"]?.toString() ?? "";
                       final fecha = fechaApi.length > 16
@@ -1645,7 +1645,7 @@ class _ReportesSheet extends StatelessWidget {
                                               BorderRadius.circular(6),
                                         ),
                                         child: Text(
-                                          'ID: $idThief',
+                                          'Nombre del Sospechoso: $nombreSospechoso',
                                           style: TextStyle(
                                             fontSize: 11,
                                             fontWeight: FontWeight.bold,

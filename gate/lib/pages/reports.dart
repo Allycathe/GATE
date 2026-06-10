@@ -192,7 +192,7 @@ class _ReportsPageState extends State<ReportsPage> {
                                             ),
                                             const SizedBox(height: 4),
                                             Text(
-                                                "Nombre de persona reportada: $nombreSospechoso"),
+                                                "Persona reportada: $nombreSospechoso"),
                                             Text(
                                                 "ID supermercado: $idSupermarket"),
                                             Text("Fecha: $fecha"),
