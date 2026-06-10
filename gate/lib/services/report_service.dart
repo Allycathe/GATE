@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../config.dart';
 
+// Actualizado a nombre_sospechoso en tabla reports
+
 class ReportService {
   static Future<List<dynamic>> listarReportes() async {
     final url = Uri.parse('$baseUrl/reportes');
@@ -21,7 +23,7 @@ class ReportService {
   }
 
   static Future<Map<String, dynamic>> crearReporte({
-    required int idThief,
+    required String nombreSospechoso,
     required String description,
     required int idSupermarket,
     required int idReporter,
@@ -43,7 +45,7 @@ class ReportService {
         'Authorization': 'Bearer $userToken',
       },
       body: jsonEncode({
-        'id_thief': idThief,
+        'nombre_sospechoso': nombreSospechoso,
         'description': description,
         'id_supermarket': idSupermarket,
         if (imagenBase64 != null) 'image': imagenBase64,
@@ -61,7 +63,7 @@ class ReportService {
 
   static Future<Map<String, dynamic>> actualizarReporte({
     required int id,
-    required int idThief,
+    required String nombreSospechoso,
     required String description,
     required int idSupermarket,
     File? imagen,
@@ -86,7 +88,7 @@ class ReportService {
         'Authorization': 'Bearer $userToken',
       },
       body: jsonEncode({
-        'id_thief': idThief,
+        'nombre_sospechoso': nombreSospechoso,
         'description': description,
         'id_supermarket': idSupermarket,
         if (imagenFinal != null) 'image': imagenFinal,

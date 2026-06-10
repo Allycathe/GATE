@@ -68,3 +68,36 @@ desktop.ini
 # Docker
 # ========================
 docker-compose.override.yml
+
+# ========================
+# Flutter - adicionales
+# ========================
+gate/build/
+gate/.dart_tool/
+gate/pubspec.lock
+*.g.dart
+*.freezed.dart
+
+# Flutter web
+gate/web/
+
+# Compilaciones móviles
+**/*.apk
+**/*.aab
+**/*.ipa
+**/*.dSYM
+
+# ========================
+# Archivos residuales raíz
+# ========================
+package.json
+package-lock.json
+node_modules/
+
+# ========================
+# Credenciales adicionales
+# ========================
+secrets/
+*-firebase-adminsdk-*.json
+*.keystore
+*.jks

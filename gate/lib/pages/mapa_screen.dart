@@ -21,7 +21,7 @@ class MapTheme {
   Color get background => isDark ? const Color(0xFF0D1117) : const Color(0xFFF4F6FA);
   Color get surface => isDark ? const Color(0xFF161B22) : Colors.white;
   Color get surfaceVariant => isDark ? const Color(0xFF1F2937) : const Color(0xFFF0F4FF);
-  Color get primary => const Color(0xFF6366F1); // indigo accent
+  Color get primary => const Color(0xFF6366F1);
   Color get danger => const Color(0xFFEF4444);
   Color get warning => const Color(0xFFF59E0B);
   Color get success => const Color(0xFF10B981);
@@ -62,7 +62,6 @@ class _PulsingMarkerState extends State<PulsingMarker>
   late AnimationController _bounceController;
   late Animation<double> _pulseAnim;
   late Animation<double> _bounceAnim;
-  bool _pressed = false;
 
   @override
   void initState() {
@@ -115,7 +114,6 @@ class _PulsingMarkerState extends State<PulsingMarker>
               clipBehavior: Clip.none,
               alignment: Alignment.center,
               children: [
-                // Pulse ring (only when reports exist)
                 if (hasReports)
                   Opacity(
                     opacity: (1.0 - _pulseAnim.value).clamp(0.0, 0.6),
@@ -134,8 +132,6 @@ class _PulsingMarkerState extends State<PulsingMarker>
                       ),
                     ),
                   ),
-
-                // Main pin
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -144,9 +140,7 @@ class _PulsingMarkerState extends State<PulsingMarker>
                       height: 38,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: widget.isDark
-                            ? const Color(0xFF1F2937)
-                            : Colors.white,
+                        color: widget.isDark ? const Color(0xFF1F2937) : Colors.white,
                         border: Border.all(color: widget.color, width: 2.5),
                         boxShadow: [
                           BoxShadow(
@@ -156,21 +150,14 @@ class _PulsingMarkerState extends State<PulsingMarker>
                           ),
                         ],
                       ),
-                      child: Icon(
-                        Icons.store_rounded,
-                        color: widget.color,
-                        size: 20,
-                      ),
+                      child: Icon(Icons.store_rounded, color: widget.color, size: 20),
                     ),
-                    // Pin tail
                     CustomPaint(
                       size: const Size(12, 8),
                       painter: _PinTailPainter(color: widget.color),
                     ),
                   ],
                 ),
-
-                // Report badge
                 if (hasReports)
                   Positioned(
                     top: -4,
@@ -182,10 +169,7 @@ class _PulsingMarkerState extends State<PulsingMarker>
                         color: widget.color,
                         borderRadius: BorderRadius.circular(10),
                         boxShadow: [
-                          BoxShadow(
-                            color: widget.color.withOpacity(0.5),
-                            blurRadius: 6,
-                          ),
+                          BoxShadow(color: widget.color.withOpacity(0.5), blurRadius: 6),
                         ],
                       ),
                       child: Text(
@@ -199,8 +183,6 @@ class _PulsingMarkerState extends State<PulsingMarker>
                       ),
                     ),
                   ),
-
-                // Name label (below pin)
                 Positioned(
                   bottom: -18,
                   child: Container(
@@ -211,10 +193,7 @@ class _PulsingMarkerState extends State<PulsingMarker>
                           : Colors.white.withOpacity(0.95),
                       borderRadius: BorderRadius.circular(6),
                       boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
-                          blurRadius: 4,
-                        ),
+                        BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 4),
                       ],
                     ),
                     child: Text(
@@ -298,7 +277,6 @@ class _UserLocationMarkerState extends State<UserLocationMarker>
         return Stack(
           alignment: Alignment.center,
           children: [
-            // Outer ripple
             Opacity(
               opacity: (1 - _anim.value) * 0.4,
               child: Transform.scale(
@@ -306,14 +284,13 @@ class _UserLocationMarkerState extends State<UserLocationMarker>
                 child: Container(
                   width: 20,
                   height: 20,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFF6366F1),
+                    color: Color(0xFF6366F1),
                   ),
                 ),
               ),
             ),
-            // Inner dot
             Container(
               width: 18,
               height: 18,
@@ -395,8 +372,9 @@ class _PantallaMapaState extends State<PantallaMapa>
   List<dynamic> _historialCompletoReportes = [];
   bool _cargando = true;
   bool _isDarkMode = true;
-  String _filtroActivo = 'todos'; // todos | con_reportes | sin_reportes
+  String _filtroActivo = 'todos';
   String _searchQuery = '';
+  double _zoomLevel = 15.0; // ← rastreamos el zoom actual
   final MapController _mapController = MapController();
   final TextEditingController _searchController = TextEditingController();
   bool _showSearch = false;
@@ -408,6 +386,10 @@ class _PantallaMapaState extends State<PantallaMapa>
   late Animation<Offset> _headerSlide;
 
   MapTheme get _theme => MapTheme(isDark: _isDarkMode);
+
+  // Límites de zoom
+  static const double _minZoom = 3.0;
+  static const double _maxZoom = 19.0;
 
   @override
   void initState() {
@@ -584,14 +566,12 @@ class _PantallaMapaState extends State<PantallaMapa>
   List<Map<String, dynamic>> get _supermercadosFiltrados {
     return _supermercados.where((s) {
       final nombre = s['nombre'].toString().toLowerCase();
-      final matchSearch = _searchQuery.isEmpty ||
-          nombre.contains(_searchQuery.toLowerCase());
-
+      final matchSearch =
+          _searchQuery.isEmpty || nombre.contains(_searchQuery.toLowerCase());
       final count = _filtrarReportes(s['id']).length;
       final matchFilter = _filtroActivo == 'todos' ||
           (_filtroActivo == 'con_reportes' && count > 0) ||
           (_filtroActivo == 'sin_reportes' && count == 0);
-
       return matchSearch && matchFilter;
     }).toList();
   }
@@ -605,6 +585,28 @@ class _PantallaMapaState extends State<PantallaMapa>
   void _centrarEnUsuario() {
     HapticFeedback.lightImpact();
     _mapController.move(_ubicacionUsuario, 15.0);
+    setState(() => _zoomLevel = 15.0);
+  }
+
+  // ── ZOOM CONTROLS ──────────────────────────────────────────────────────────
+  void _zoomIn() {
+    HapticFeedback.selectionClick();
+    final newZoom = (_zoomLevel + 1.0).clamp(_minZoom, _maxZoom);
+    _mapController.move(_mapController.camera.center, newZoom);
+    setState(() => _zoomLevel = newZoom);
+  }
+
+  void _zoomOut() {
+    HapticFeedback.selectionClick();
+    final newZoom = (_zoomLevel - 1.0).clamp(_minZoom, _maxZoom);
+    _mapController.move(_mapController.camera.center, newZoom);
+    setState(() => _zoomLevel = newZoom);
+  }
+
+  // ── NAVIGATE BACK ──────────────────────────────────────────────────────────
+  void _volverAtras() {
+    HapticFeedback.lightImpact();
+    Navigator.of(context).pop();
   }
 
   Future<void> _refrescar() async {
@@ -617,12 +619,10 @@ class _PantallaMapaState extends State<PantallaMapa>
     setState(() => _cargando = false);
   }
 
-  // ── STATISTICS BOTTOM SHEET ─────────────────────────────────────────────────
   void _mostrarEstadisticas() {
     final total = _supermercados.length;
-    final conReportes = _supermercados
-        .where((s) => _filtrarReportes(s['id']).isNotEmpty)
-        .length;
+    final conReportes =
+        _supermercados.where((s) => _filtrarReportes(s['id']).isNotEmpty).length;
     final totalReportes = _historialCompletoReportes.length;
 
     HapticFeedback.lightImpact();
@@ -638,7 +638,6 @@ class _PantallaMapaState extends State<PantallaMapa>
     );
   }
 
-  // ── REPORT BOTTOM SHEET ─────────────────────────────────────────────────────
   void _mostrarReportes(int idSucursal, String nombre) {
     final reportes = _filtrarReportes(idSucursal);
     HapticFeedback.mediumImpact();
@@ -734,10 +733,7 @@ class _PantallaMapaState extends State<PantallaMapa>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: SweepGradient(
-                    colors: [
-                      _theme.primary,
-                      _theme.primary.withOpacity(0.1),
-                    ],
+                    colors: [_theme.primary, _theme.primary.withOpacity(0.1)],
                   ),
                 ),
                 child: Padding(
@@ -768,10 +764,17 @@ class _PantallaMapaState extends State<PantallaMapa>
       mapController: _mapController,
       options: MapOptions(
         initialCenter: _ubicacionUsuario,
-        initialZoom: 15.0,
-        interactionOptions: const InteractionOptions(
-          flags: InteractiveFlag.all,
-        ),
+        initialZoom: _zoomLevel,
+        interactionOptions: const InteractionOptions(flags: InteractiveFlag.all),
+        // Sincronizamos _zoomLevel cuando el usuario hace pinch/drag
+        onMapEvent: (event) {
+          if (event is MapEventMove || event is MapEventScrollWheelZoom) {
+            final newZoom = _mapController.camera.zoom;
+            if ((newZoom - _zoomLevel).abs() > 0.05) {
+              setState(() => _zoomLevel = newZoom);
+            }
+          }
+        },
       ),
       children: [
         TileLayer(
@@ -779,7 +782,6 @@ class _PantallaMapaState extends State<PantallaMapa>
           subdomains: const ['a', 'b', 'c'],
           userAgentPackageName: 'com.gate.app',
         ),
-        // Supermarket markers
         MarkerLayer(
           markers: filtrados.map((s) {
             final count = _filtrarReportes(s['id']).length;
@@ -798,7 +800,6 @@ class _PantallaMapaState extends State<PantallaMapa>
             );
           }).toList(),
         ),
-        // User location marker
         MarkerLayer(
           markers: [
             Marker(
@@ -820,9 +821,9 @@ class _PantallaMapaState extends State<PantallaMapa>
       right: 0,
       child: Container(
         margin: const EdgeInsets.all(12),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: _theme.surface.withOpacity(0.96),
+          color: _theme.surface.withOpacity(0.97),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: _theme.border),
           boxShadow: [
@@ -835,16 +836,37 @@ class _PantallaMapaState extends State<PantallaMapa>
         ),
         child: Row(
           children: [
+            // ── BOTÓN RETROCEDER ──────────────────────────────────────────
+            GestureDetector(
+              onTap: _volverAtras,
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: _theme.surfaceVariant,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: _theme.border),
+                ),
+                child: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: _theme.textPrimary,
+                  size: 16,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+
+            // ── ÍCONO + TÍTULO ────────────────────────────────────────────
             Container(
-              width: 36,
-              height: 36,
+              width: 34,
+              height: 34,
               decoration: BoxDecoration(
                 color: _theme.primary.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(Icons.shield_rounded, color: _theme.primary, size: 20),
+              child: Icon(Icons.shield_rounded, color: _theme.primary, size: 18),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -853,21 +875,24 @@ class _PantallaMapaState extends State<PantallaMapa>
                   Text(
                     'Mapa de Alertas',
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                       color: _theme.textPrimary,
                     ),
                   ),
                   Text(
                     '${_supermercadosFiltrados.length} sucursales visibles',
-                    style: TextStyle(fontSize: 11, color: _theme.textSecondary),
+                    style: TextStyle(fontSize: 10, color: _theme.textSecondary),
                   ),
                 ],
               ),
             ),
-            // Search button
+
+            // ── SEARCH ───────────────────────────────────────────────────
             _HeaderBtn(
-              icon: _showSearch ? Icons.search_off_rounded : Icons.search_rounded,
+              icon: _showSearch
+                  ? Icons.search_off_rounded
+                  : Icons.search_rounded,
               theme: _theme,
               onTap: () => setState(() {
                 _showSearch = !_showSearch;
@@ -878,14 +903,16 @@ class _PantallaMapaState extends State<PantallaMapa>
               }),
             ),
             const SizedBox(width: 6),
-            // Stats button
+
+            // ── STATS ────────────────────────────────────────────────────
             _HeaderBtn(
               icon: Icons.bar_chart_rounded,
               theme: _theme,
               onTap: _mostrarEstadisticas,
             ),
             const SizedBox(width: 6),
-            // Dark mode toggle
+
+            // ── DARK MODE ────────────────────────────────────────────────
             GestureDetector(
               onTap: () {
                 HapticFeedback.selectionClick();
@@ -902,7 +929,9 @@ class _PantallaMapaState extends State<PantallaMapa>
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
-                  _isDarkMode ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                  _isDarkMode
+                      ? Icons.light_mode_rounded
+                      : Icons.dark_mode_rounded,
                   color: _isDarkMode
                       ? const Color(0xFFF59E0B)
                       : const Color(0xFF6366F1),
@@ -926,9 +955,7 @@ class _PantallaMapaState extends State<PantallaMapa>
           color: _theme.surface,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: _theme.primary.withOpacity(0.4)),
-          boxShadow: [
-            BoxShadow(color: _theme.cardShadow, blurRadius: 12),
-          ],
+          boxShadow: [BoxShadow(color: _theme.cardShadow, blurRadius: 12)],
         ),
         child: Row(
           children: [
@@ -985,7 +1012,8 @@ class _PantallaMapaState extends State<PantallaMapa>
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                 decoration: BoxDecoration(
                   color: isActive
                       ? _theme.primary
@@ -995,7 +1023,12 @@ class _PantallaMapaState extends State<PantallaMapa>
                     color: isActive ? _theme.primary : _theme.border,
                   ),
                   boxShadow: isActive
-                      ? [BoxShadow(color: _theme.primary.withOpacity(0.3), blurRadius: 8)]
+                      ? [
+                          BoxShadow(
+                            color: _theme.primary.withOpacity(0.3),
+                            blurRadius: 8,
+                          )
+                        ]
                       : [],
                 ),
                 child: Row(
@@ -1026,10 +1059,66 @@ class _PantallaMapaState extends State<PantallaMapa>
   }
 
   Widget _buildFABs() {
+    final canZoomIn = _zoomLevel < _maxZoom;
+    final canZoomOut = _zoomLevel > _minZoom;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Refresh
+        // ── ZOOM LEVEL BADGE ──────────────────────────────────────────────
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: _theme.surface.withOpacity(0.95),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: _theme.border),
+            boxShadow: [
+              BoxShadow(color: _theme.cardShadow, blurRadius: 6),
+            ],
+          ),
+          child: Text(
+            'z ${_zoomLevel.toStringAsFixed(0)}',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: _theme.primary,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+
+        // ── ZOOM IN ───────────────────────────────────────────────────────
+        _MapFAB(
+          icon: Icons.add_rounded,
+          theme: _theme,
+          onTap: canZoomIn ? _zoomIn : () {},
+          small: true,
+          disabled: !canZoomIn,
+        ),
+
+        // ── DIVISOR VISUAL ────────────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Container(
+            width: 22,
+            height: 1,
+            color: _theme.border,
+          ),
+        ),
+
+        // ── ZOOM OUT ──────────────────────────────────────────────────────
+        _MapFAB(
+          icon: Icons.remove_rounded,
+          theme: _theme,
+          onTap: canZoomOut ? _zoomOut : () {},
+          small: true,
+          disabled: !canZoomOut,
+        ),
+
+        const SizedBox(height: 12),
+
+        // ── REFRESH ───────────────────────────────────────────────────────
         _MapFAB(
           icon: Icons.refresh_rounded,
           theme: _theme,
@@ -1037,7 +1126,8 @@ class _PantallaMapaState extends State<PantallaMapa>
           small: true,
         ),
         const SizedBox(height: 10),
-        // Center on user
+
+        // ── MY LOCATION ───────────────────────────────────────────────────
         _MapFAB(
           icon: Icons.my_location_rounded,
           theme: _theme,
@@ -1058,9 +1148,7 @@ class _PantallaMapaState extends State<PantallaMapa>
         color: _theme.surface.withOpacity(0.95),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: _theme.border),
-        boxShadow: [
-          BoxShadow(color: _theme.cardShadow, blurRadius: 10),
-        ],
+        boxShadow: [BoxShadow(color: _theme.cardShadow, blurRadius: 10)],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1128,12 +1216,14 @@ class _MapFAB extends StatefulWidget {
   final MapTheme theme;
   final VoidCallback onTap;
   final bool small;
+  final bool disabled;
 
   const _MapFAB({
     required this.icon,
     required this.theme,
     required this.onTap,
     this.small = false,
+    this.disabled = false,
   });
 
   @override
@@ -1164,17 +1254,23 @@ class _MapFABState extends State<_MapFAB> with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final size = widget.small ? 40.0 : 50.0;
+    final iconColor = widget.disabled
+        ? widget.theme.textSecondary.withOpacity(0.35)
+        : widget.theme.primary;
+
     return GestureDetector(
-      onTapDown: (_) => _ctrl.forward(),
-      onTapUp: (_) {
-        _ctrl.reverse();
-        widget.onTap();
-      },
-      onTapCancel: () => _ctrl.reverse(),
+      onTapDown: widget.disabled ? null : (_) => _ctrl.forward(),
+      onTapUp: widget.disabled
+          ? null
+          : (_) {
+              _ctrl.reverse();
+              widget.onTap();
+            },
+      onTapCancel: widget.disabled ? null : () => _ctrl.reverse(),
       child: AnimatedBuilder(
         animation: _scale,
         builder: (_, __) => Transform.scale(
-          scale: _scale.value,
+          scale: widget.disabled ? 1.0 : _scale.value,
           child: Container(
             width: size,
             height: size,
@@ -1182,17 +1278,19 @@ class _MapFABState extends State<_MapFAB> with SingleTickerProviderStateMixin {
               color: widget.theme.surface,
               shape: BoxShape.circle,
               border: Border.all(color: widget.theme.border),
-              boxShadow: [
-                BoxShadow(
-                  color: widget.theme.cardShadow,
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+              boxShadow: widget.disabled
+                  ? []
+                  : [
+                      BoxShadow(
+                        color: widget.theme.cardShadow,
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
             ),
             child: Icon(
               widget.icon,
-              color: widget.theme.primary,
+              color: iconColor,
               size: widget.small ? 18 : 22,
             ),
           ),
@@ -1259,17 +1357,49 @@ class _EstadisticasSheet extends StatelessWidget {
           const SizedBox(height: 20),
           Row(
             children: [
-              Expanded(child: _StatCard(label: 'Sucursales', value: '$total', icon: Icons.store_rounded, color: theme.primary, theme: theme)),
+              Expanded(
+                child: _StatCard(
+                  label: 'Sucursales',
+                  value: '$total',
+                  icon: Icons.store_rounded,
+                  color: theme.primary,
+                  theme: theme,
+                ),
+              ),
               const SizedBox(width: 12),
-              Expanded(child: _StatCard(label: 'Con alertas', value: '$conReportes', icon: Icons.warning_rounded, color: theme.danger, theme: theme)),
+              Expanded(
+                child: _StatCard(
+                  label: 'Con alertas',
+                  value: '$conReportes',
+                  icon: Icons.warning_rounded,
+                  color: theme.danger,
+                  theme: theme,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _StatCard(label: 'Sin alertas', value: '$sinReportes', icon: Icons.check_circle_rounded, color: theme.success, theme: theme)),
+              Expanded(
+                child: _StatCard(
+                  label: 'Sin alertas',
+                  value: '$sinReportes',
+                  icon: Icons.check_circle_rounded,
+                  color: theme.success,
+                  theme: theme,
+                ),
+              ),
               const SizedBox(width: 12),
-              Expanded(child: _StatCard(label: 'Reportes totales', value: '$totalReportes', icon: Icons.report_rounded, color: theme.warning, theme: theme)),
+              Expanded(
+                child: _StatCard(
+                  label: 'Reportes totales',
+                  value: '$totalReportes',
+                  icon: Icons.report_rounded,
+                  color: theme.warning,
+                  theme: theme,
+                ),
+              ),
             ],
           ),
         ],
@@ -1315,10 +1445,7 @@ class _StatCard extends StatelessWidget {
               color: color,
             ),
           ),
-          Text(
-            label,
-            style: TextStyle(fontSize: 12, color: theme.textSecondary),
-          ),
+          Text(label, style: TextStyle(fontSize: 12, color: theme.textSecondary)),
         ],
       ),
     );
@@ -1348,7 +1475,6 @@ class _ReportesSheet extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Handle
           Padding(
             padding: const EdgeInsets.only(top: 12),
             child: Center(
@@ -1362,8 +1488,6 @@ class _ReportesSheet extends StatelessWidget {
               ),
             ),
           ),
-
-          // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 12, 0),
             child: Row(
@@ -1392,7 +1516,8 @@ class _ReportesSheet extends StatelessWidget {
                       ),
                       Text(
                         '${reportes.length} reporte${reportes.length != 1 ? 's' : ''}',
-                        style: TextStyle(fontSize: 12, color: theme.textSecondary),
+                        style:
+                            TextStyle(fontSize: 12, color: theme.textSecondary),
                       ),
                     ],
                   ),
@@ -1404,10 +1529,7 @@ class _ReportesSheet extends StatelessWidget {
               ],
             ),
           ),
-
           Divider(color: theme.border, height: 24),
-
-          // List
           Expanded(
             child: reportes.isEmpty
                 ? Center(
@@ -1415,7 +1537,8 @@ class _ReportesSheet extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.check_circle_outline_rounded,
-                            size: 48, color: theme.success.withOpacity(0.5)),
+                            size: 48,
+                            color: theme.success.withOpacity(0.5)),
                         const SizedBox(height: 12),
                         Text(
                           'Sin reportes recientes',
@@ -1442,7 +1565,7 @@ class _ReportesSheet extends StatelessWidget {
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, i) {
                       final r = reportes[i];
-                      final idThief = r["id_thief"] ?? '—';
+                      final nombreSospechoso = r["nombre_sospechoso"] ?? '—';
                       final descripcion = r["description"] ?? "Sin descripción";
                       final fechaApi = r["date"]?.toString() ?? "";
                       final fecha = fechaApi.length > 16
@@ -1468,7 +1591,6 @@ class _ReportesSheet extends StatelessWidget {
                           ),
                           child: Row(
                             children: [
-                              // Image
                               ClipRRect(
                                 borderRadius: const BorderRadius.horizontal(
                                     left: Radius.circular(14)),
@@ -1478,11 +1600,14 @@ class _ReportesSheet extends StatelessWidget {
                                   child: Image.network(
                                     '$baseUrl/reportes/${r["id"]}/imagen',
                                     fit: BoxFit.cover,
-                                    headers: {'Authorization': 'Bearer $userToken'},
+                                    headers: {
+                                      'Authorization': 'Bearer $userToken'
+                                    },
                                     errorBuilder: (_, __, ___) => Container(
                                       color: theme.danger.withOpacity(0.1),
                                       child: Icon(Icons.broken_image_rounded,
-                                          color: theme.danger.withOpacity(0.5), size: 28),
+                                          color: theme.danger.withOpacity(0.5),
+                                          size: 28),
                                     ),
                                     loadingBuilder: (_, child, progress) {
                                       if (progress == null) return child;
@@ -1503,33 +1628,30 @@ class _ReportesSheet extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                              // Info
                               Expanded(
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 14, vertical: 12),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Row(
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 7, vertical: 3),
-                                            decoration: BoxDecoration(
-                                              color: theme.danger.withOpacity(0.12),
-                                              borderRadius: BorderRadius.circular(6),
-                                            ),
-                                            child: Text(
-                                              'ID: $idThief',
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.bold,
-                                                color: theme.danger,
-                                              ),
-                                            ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 7, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: theme.danger.withOpacity(0.12),
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          'Nombre del Sospechoso: $nombreSospechoso',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: theme.danger,
                                           ),
-                                        ],
+                                        ),
                                       ),
                                       const SizedBox(height: 6),
                                       Text(
@@ -1545,7 +1667,8 @@ class _ReportesSheet extends StatelessWidget {
                                       Row(
                                         children: [
                                           Icon(Icons.access_time_rounded,
-                                              size: 11, color: theme.textSecondary),
+                                              size: 11,
+                                              color: theme.textSecondary),
                                           const SizedBox(width: 4),
                                           Text(
                                             fecha,

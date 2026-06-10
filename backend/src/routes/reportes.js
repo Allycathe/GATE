@@ -4,7 +4,8 @@ const compressImage = require('../middleware/compressImage');
 const isAdmin = require('../middleware/isAdmin');
 const faceDescriptor = require('../middleware/faceDescriptor');
 const { extractDescriptor, findSimilar } = require('../services/faceService');
-const { evaluateCrimeAlert } = require('../services/crimeAlertService');
+const { evaluateCrimeAlert, notifyNearbyGuards } = require('../services/crimeAlertService');
+const { getMessaging } = require('firebase-admin/messaging');
 
 module.exports = (pool) => {
   const router = express.Router();
@@ -13,7 +14,7 @@ module.exports = (pool) => {
   router.get('/', auth, async (req, res) => {
     try {
       const result = await pool.query(
-        'SELECT id, id_thief, description, date, id_supermarket, id_user FROM report ORDER BY id DESC'
+        'SELECT id, nombre_sospechoso, description, date, id_supermarket, id_user FROM report ORDER BY id DESC'
       );
       res.json(result.rows);
     } catch (error) {
@@ -27,7 +28,7 @@ module.exports = (pool) => {
     const { id } = req.params;
     try {
       const result = await pool.query(
-        'SELECT id, id_thief, description, date, id_supermarket FROM report WHERE id = $1',
+        'SELECT id, nombre_sospechoso, description, date, id_supermarket FROM report WHERE id = $1',
         [id]
       );
       if (result.rowCount === 0) {
@@ -42,110 +43,110 @@ module.exports = (pool) => {
 
   // 3. CREAR UN REPORTE
   router.post('/', auth, compressImage, faceDescriptor, async (req, res) => {
-  const { id_thief, description, id_supermarket } = req.body;
-  const id_user = req.usuario.id;
+    const { description, id_supermarket, nombre_sospechoso } = req.body;
+    const id_user = req.usuario.id;
 
-  if (!id_thief || !id_supermarket) {
-    return res.status(400).json({ error: 'Faltan campos obligatorios' });
-  }
+    if (!id_supermarket) {
+      return res.status(400).json({ error: 'Faltan campos obligatorios' });
+    }
 
-  try {
-    const query = `
-      INSERT INTO report (id_thief, description, id_supermarket, image, face_descriptor, id_user)
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING id, id_thief, description, id_supermarket`;
+    try {
+      const query = `
+        INSERT INTO report (description, id_supermarket, image, face_descriptor, id_user, nombre_sospechoso)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING id, description, id_supermarket, nombre_sospechoso`;
 
-    const result = await pool.query(query, [
-      id_thief,
-      description,
-      id_supermarket,
-      req.imageBuffer ?? null,
-      req.faceDescriptor ? JSON.stringify(req.faceDescriptor) : null,
-      id_user,
-    ]);
-
-    const newReport = result.rows[0]; // 👈 extraer aquí
-
-    // 👇 disparar evaluación sin bloquear la respuesta
-    evaluateCrimeAlert(pool, newReport, {
-      radiusKm: 10,
-      windowHours: 1,
-      minReports: 2,
-    }).then((alert) => {
-      if (alert) {
-        console.log(`[CrimeAlert] Alerta #${alert.id} — ${alert.report_count} reportes en ${alert.radius_km}km / ${alert.time_window_h}h`);
-      }
-    }).catch((err) => {
-      console.error('[CrimeAlert] Error al evaluar alerta:', err.message);
-    });
-
-    res.status(201).json({
-      mensaje: 'Reporte creado con éxito',
-      reporte: newReport,
-      rostro_detectado: req.faceDescriptor !== null,
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error interno al crear reporte' });
-  }
-});
-
-  // 4. MODIFICAR UN REPORTE
-router.put('/:id', auth, compressImage, faceDescriptor, async (req, res) => {
-  const { id } = req.params;
-  const { id_thief, description, id_supermarket } = req.body;
-
-  // Guard: si los campos obligatorios no llegaron, el Content-Type del frontend está mal
-  if (!id_thief || !id_supermarket) {
-    return res.status(400).json({
-      error: 'Faltan campos obligatorios',
-      debug: { id_thief, id_supermarket, content_type: req.headers['content-type'] }
-    });
-  }
-
-  try {
-    // Si no vino imagen nueva, preservar la existente en la DB
-    let imageBuffer = req.imageBuffer ?? undefined;
-    let faceDescriptor = req.faceDescriptor !== undefined ? req.faceDescriptor : undefined;
-
-    let query;
-    let params;
-
-    if (imageBuffer !== undefined) {
-      // Vino imagen nueva: actualizar imagen y descriptor
-      query = `
-        UPDATE report
-        SET id_thief = $1, description = $2, id_supermarket = $3, image = $4, face_descriptor = $5
-        WHERE id = $6
-        RETURNING id, id_thief, description, id_supermarket`;
-      params = [
-        id_thief,
+      const result = await pool.query(query, [
         description,
         id_supermarket,
-        imageBuffer,
-        faceDescriptor ? JSON.stringify(faceDescriptor) : null,
-        id,
-      ];
-    } else {
-      // Sin imagen nueva: no tocar image ni face_descriptor
-      query = `
-        UPDATE report
-        SET id_thief = $1, description = $2, id_supermarket = $3
-        WHERE id = $4
-        RETURNING id, id_thief, description, id_supermarket`;
-      params = [id_thief, description, id_supermarket, id];
+        req.imageBuffer ?? null,
+        req.faceDescriptor ? JSON.stringify(req.faceDescriptor) : null,
+        id_user,
+        nombre_sospechoso ?? null,
+      ]);
+
+      const newReport = result.rows[0];
+
+      // 🚨 Notificar guardias cercanos inmediatamente (un solo reporte)
+      notifyNearbyGuards(pool, newReport, getMessaging(), { radiusKm: 10 })
+        .catch((err) => console.error('[NearbyGuards] Error:', err.message));
+
+      // Disparar evaluación de alerta de crimen sin bloquear la respuesta
+      evaluateCrimeAlert(pool, newReport, {
+        radiusKm: 10,
+        windowHours: 1,
+        minReports: 2,
+      }).then((alert) => {
+        if (alert) {
+          console.log(`[CrimeAlert] Alerta #${alert.id} — ${alert.report_count} reportes en ${alert.radius_km}km / ${alert.time_window_h}h`);
+        }
+      }).catch((err) => {
+        console.error('[CrimeAlert] Error al evaluar alerta:', err.message);
+      });
+
+      res.status(201).json({
+        mensaje: 'Reporte creado con éxito',
+        reporte: newReport,
+        rostro_detectado: req.faceDescriptor !== null,
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Error interno al crear reporte' });
+    }
+  });
+
+  // 4. MODIFICAR UN REPORTE
+  router.put('/:id', auth, compressImage, faceDescriptor, async (req, res) => {
+    const { id } = req.params;
+    const { description, id_supermarket, nombre_sospechoso } = req.body;
+
+    if (!id_supermarket) {
+      return res.status(400).json({
+        error: 'Faltan campos obligatorios',
+        debug: { id_supermarket, content_type: req.headers['content-type'] }
+      });
     }
 
-    const result = await pool.query(query, params);
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: 'El reporte no existe' });
+    try {
+      let imageBuffer = req.imageBuffer ?? undefined;
+      let faceDesc = req.faceDescriptor !== undefined ? req.faceDescriptor : undefined;
+
+      let query;
+      let params;
+
+      if (imageBuffer !== undefined) {
+        query = `
+          UPDATE report
+          SET description = $1, id_supermarket = $2, image = $3, face_descriptor = $4, nombre_sospechoso = $5
+          WHERE id = $6
+          RETURNING id, description, id_supermarket, nombre_sospechoso`;
+        params = [
+          description,
+          id_supermarket,
+          imageBuffer,
+          faceDesc ? JSON.stringify(faceDesc) : null,
+          nombre_sospechoso ?? null,
+          id,
+        ];
+      } else {
+        query = `
+          UPDATE report
+          SET description = $1, id_supermarket = $2, nombre_sospechoso = $3
+          WHERE id = $4
+          RETURNING id, description, id_supermarket, nombre_sospechoso`;
+        params = [description, id_supermarket, nombre_sospechoso ?? null, id];
+      }
+
+      const result = await pool.query(query, params);
+      if (result.rowCount === 0) {
+        return res.status(404).json({ error: 'El reporte no existe' });
+      }
+      res.json({ mensaje: 'Reporte actualizado', reporte: result.rows[0] });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Error al actualizar el reporte' });
     }
-    res.json({ mensaje: 'Reporte actualizado', reporte: result.rows[0] });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error al actualizar el reporte' });
-  }
-});
+  });
 
   // 5. ELIMINAR UN REPORTE - solo admin
   router.delete('/:id', auth, isAdmin(pool), async (req, res) => {
@@ -204,9 +205,9 @@ router.put('/:id', auth, compressImage, faceDescriptor, async (req, res) => {
         : JSON.parse(refResult.rows[0].face_descriptor);
 
       const allResult = await pool.query(`
-        SELECT r.id, r.id_thief, r.description, r.date, r.id_supermarket,
+        SELECT r.id, r.nombre_sospechoso, r.description, r.date, r.id_supermarket,
                r.face_descriptor,
-               s.name  AS supermarket_name,
+               s.name AS supermarket_name,
                s.location_x,
                s.location_y
         FROM report r
@@ -221,7 +222,7 @@ router.put('/:id', auth, compressImage, faceDescriptor, async (req, res) => {
         total: similares.length,
         similares: similares.map(r => ({
           id: r.id,
-          id_thief: r.id_thief,
+          nombre_sospechoso: r.nombre_sospechoso,
           description: r.description,
           date: r.date,
           distancia: parseFloat(r.distance.toFixed(4)),
@@ -253,9 +254,9 @@ router.put('/:id', auth, compressImage, faceDescriptor, async (req, res) => {
       }
 
       const allResult = await pool.query(`
-        SELECT r.id, r.id_thief, r.description, r.date, r.id_supermarket,
+        SELECT r.id, r.nombre_sospechoso, r.description, r.date, r.id_supermarket,
                r.face_descriptor,
-               s.name  AS supermarket_name,
+               s.name AS supermarket_name,
                s.location_x,
                s.location_y
         FROM report r
@@ -270,7 +271,7 @@ router.put('/:id', auth, compressImage, faceDescriptor, async (req, res) => {
         total: similares.length,
         resultados: similares.map(r => ({
           id: r.id,
-          id_thief: r.id_thief,
+          nombre_sospechoso: r.nombre_sospechoso,
           description: r.description,
           date: r.date,
           distancia: parseFloat(r.distance.toFixed(4)),
