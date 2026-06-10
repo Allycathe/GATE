@@ -4,7 +4,8 @@ const compressImage = require('../middleware/compressImage');
 const isAdmin = require('../middleware/isAdmin');
 const faceDescriptor = require('../middleware/faceDescriptor');
 const { extractDescriptor, findSimilar } = require('../services/faceService');
-const { evaluateCrimeAlert } = require('../services/crimeAlertService');
+const { evaluateCrimeAlert, notifyNearbyGuards } = require('../services/crimeAlertService');
+const { getMessaging } = require('firebase-admin/messaging');
 
 module.exports = (pool) => {
   const router = express.Router();
@@ -64,20 +65,24 @@ module.exports = (pool) => {
       id_user,
     ]);
 
-    const newReport = result.rows[0]; // 👈 extraer aquí
+    const newReport = result.rows[0];
 
-    // 👇 disparar evaluación sin bloquear la respuesta
-    evaluateCrimeAlert(pool, newReport, {
-      radiusKm: 10,
-      windowHours: 1,
-      minReports: 2,
-    }).then((alert) => {
-      if (alert) {
-        console.log(`[CrimeAlert] Alerta #${alert.id} — ${alert.report_count} reportes en ${alert.radius_km}km / ${alert.time_window_h}h`);
-      }
-    }).catch((err) => {
-      console.error('[CrimeAlert] Error al evaluar alerta:', err.message);
-    });
+// 🚨 Notificar guardias cercanos inmediatamente (un solo reporte)
+notifyNearbyGuards(pool, newReport, getMessaging(), { radiusKm: 10 })
+  .catch((err) => console.error('[NearbyGuards] Error:', err.message));
+
+// 👇 disparar evaluación sin bloquear la respuesta
+evaluateCrimeAlert(pool, newReport, {
+  radiusKm: 10,
+  windowHours: 1,
+  minReports: 2,
+}).then((alert) => {
+  if (alert) {
+    console.log(`[CrimeAlert] Alerta #${alert.id} — ${alert.report_count} reportes en ${alert.radius_km}km / ${alert.time_window_h}h`);
+  }
+}).catch((err) => {
+  console.error('[CrimeAlert] Error al evaluar alerta:', err.message);
+});
 
     res.status(201).json({
       mensaje: 'Reporte creado con éxito',
