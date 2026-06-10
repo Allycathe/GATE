@@ -20,6 +20,9 @@ String userName = "";
 String userLastName = "";
 bool userIsAdmin = false;
 
+// ignore: non_constant_identifier_names
+bool NOTIFICATIONS = true;
+
 // Configuraciones de interfaz
 
 // Default interfaceColor.fromARGB(255, 102, 102, 255)

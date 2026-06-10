@@ -154,7 +154,6 @@ class MisReportes extends StatelessWidget {
 
                                     return 
                                       Column(children: [
-                                        
                                         Table(
                                           border: TableBorder.all(
                                             color: Colors.black,

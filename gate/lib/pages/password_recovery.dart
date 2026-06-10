@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gate/config.dart';
 import '../custom_widgets/navbar.dart';
 
 
@@ -13,7 +14,11 @@ class PwRecoveryPage extends StatelessWidget {
         Center(
           child: Column(
             children: [
-              Text("Hola amucos"),
+              Text("Recuperar Contraseña", style: titleTextStyle,),
+
+              SizedBox(height: 40),
+
+              Text("data")
               
             ],
           ),
