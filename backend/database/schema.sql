@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict KujW6O9V1h7B3WgEZaxhLfA23rB789PSGpmXaZmDmBfQ6BXtxGe61viLEWsXFxD
+\restrict 4vRg3eXhDmi1mPnVqfcyjJck27bc27E1wayRdxsfSKLg8UyPV2NiZjA5WvePLRN
 
 -- Dumped from database version 15.18
 -- Dumped by pg_dump version 15.18
@@ -238,7 +238,8 @@ CREATE TABLE public.users (
     isadmin boolean DEFAULT false,
     email character varying NOT NULL,
     password character varying NOT NULL,
-    id_supermarket integer
+    id_supermarket integer,
+    fcm_token character varying
 );
 
 
@@ -431,5 +432,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict KujW6O9V1h7B3WgEZaxhLfA23rB789PSGpmXaZmDmBfQ6BXtxGe61viLEWsXFxD
+\unrestrict 4vRg3eXhDmi1mPnVqfcyjJck27bc27E1wayRdxsfSKLg8UyPV2NiZjA5WvePLRN
 

@@ -164,5 +164,24 @@ module.exports = (pool) => {
     }
   });
 
+// PUT /usuarios/:id/fcm-token
+router.put('/:id/fcm-token', async (req, res) => {
+  const { id } = req.params;
+  const { fcm_token } = req.body;
+
+  if (!fcm_token)
+    return res.status(400).json({ error: 'fcm_token requerido' });
+
+  try {
+    await pool.query(
+      'UPDATE users SET fcm_token = $1 WHERE id = $2',
+      [fcm_token, id]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
   return router;
 };

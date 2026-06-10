@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:gate/pages/encargado.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../config.dart';
 import '../custom_widgets/option_menu.dart';
 import '../custom_widgets/navbar.dart';
@@ -13,7 +15,6 @@ String definirRol(bool isAdmin) {
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
-
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
@@ -27,19 +28,43 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _initFCM() async {
     final messaging = FirebaseMessaging.instance;
-
     await messaging.requestPermission();
-    await messaging.subscribeToTopic('alertas');
+
+    // Obtener token del dispositivo y guardarlo en el backend
+    final token = await messaging.getToken();
+    if (token != null) await _saveFcmToken(token);
+
+    // Actualizar token si cambia (reinstalación, etc.)
+    messaging.onTokenRefresh.listen(_saveFcmToken);
 
     // Notificación con app en primer plano
     FirebaseMessaging.onMessage.listen((message) {
       final title = message.notification?.title ?? 'Alerta';
       final body = message.notification?.body ?? '';
-
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$title: $body')),
+        SnackBar(
+          content: Text('$title: $body'),
+          backgroundColor: Colors.red[700],
+          duration: const Duration(seconds: 5),
+        ),
       );
     });
+  }
+
+  Future<void> _saveFcmToken(String token) async {
+    try {
+      await http.put(
+        Uri.parse('$baseUrl/usuarios/$userId/fcm-token'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $userToken',
+        },
+        body: jsonEncode({'fcm_token': token}),
+      );
+      print('✅ FCM token guardado');
+    } catch (e) {
+      print('❌ Error guardando FCM token: $e');
+    }
   }
 
   @override
@@ -90,7 +115,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   backgroundColor: buttonColor, padding: EdgeInsets.all(16)),
               child: const Text("Opciones"),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             if (userIsAdmin)
               FilledButton(
                 onPressed: () {
