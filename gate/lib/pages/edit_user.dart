@@ -70,7 +70,7 @@ class _EditUserPage extends State<EditUserPage> {
   }
 
   Future<void> submitUser() async {
-    print("Valor de isadmin antes de mandarlo:");
+    print("Valor de isadmin antes de mandarlo:"); // DEBUG
     print(isAdmin);
     try {
       final response = await http.put(
@@ -109,8 +109,8 @@ class _EditUserPage extends State<EditUserPage> {
       else {
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Error al modificar al usuario"),
+          SnackBar(
+            content: Text(response.body),
           ),
         );
       }
@@ -152,8 +152,8 @@ class _EditUserPage extends State<EditUserPage> {
       else {
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Error eliminando usuario"),
+          SnackBar(
+            content: Text(response.body),
           ),
         );
       }

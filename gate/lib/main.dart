@@ -63,16 +63,6 @@ class PantallaInicio extends StatelessWidget {
               backgroundColor: buttonColor,
               padding: EdgeInsets.all(16),
             ),
-            const SizedBox(height: 40),
-            const Text("Bienvenido a GATE", style: titleTextStyle),
-            const SizedBox(
-              height: 50,
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => LoginPage()));
-              },
-              style: FilledButton.styleFrom(backgroundColor: buttonColor, padding: EdgeInsets.all(16)),
               child: const Text("Iniciar Sesion", style: TextStyle(fontSize: 20),)
             ), 
           ]),
