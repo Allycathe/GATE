@@ -35,11 +35,8 @@ module.exports = (pool) => {
   // ─────────────────────────────────────────────────────────────────────────────
   router.get('/', isAdmin(pool), async (req, res) => {
     const id_supermarket = adminSupermarket(req);
-    if(id_supermarket== null){
-     res.status(500).json({ error: err.message });
-    }
-    else
-    {
+    if (id_supermarket === null)
+      return res.status(500).json({ error: 'No se pudo determinar el supermercado del administrador' });
 
     try {
       const result = await pool.query(
@@ -51,9 +48,8 @@ module.exports = (pool) => {
       );
       res.json({ total: result.rowCount, usuarios: result.rows });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: 'Error al obtener usuarios' });
     }
-  }
   });
   
 
@@ -63,14 +59,11 @@ module.exports = (pool) => {
   router.post('/', isAdmin(pool), async (req, res) => {
     const { name, last_name, email, password, id_supermarket, isadmin } = req.body;
 
-    if (!name || !email || !password || !id_supermarket)
-      return res.status(400).json({ error: 'Faltan campos obligatorios: name, email, password, id_supermarket' });
+    if (!name || !last_name || !email || !password || !id_supermarket)
+      return res.status(400).json({ error: 'Faltan campos obligatorios: name, last_name, email, password, id_supermarket' });
 
-    // Seguridad: el id_supermarket del body debe coincidir con el del admin
-    // Evita que un admin cree guardias en supermercados ajenos
     if (parseInt(id_supermarket) !== adminSupermarket(req))
       return res.status(403).json({ error: 'No puedes crear usuarios en otro supermercado' });
-  
 
     try {
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -79,14 +72,16 @@ module.exports = (pool) => {
         `INSERT INTO users (name, last_name, email, password, isadmin, id_supermarket)
          VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING id, name, last_name, email, isadmin, id_supermarket`,
-        [name, last_name ?? null, email, hashedPassword, isadmin, id_supermarket]
+        [name, last_name, email, hashedPassword, isadmin ?? false, id_supermarket]
       );
 
       res.status(201).json({ mensaje: 'Guardia creado', usuario: result.rows[0] });
     } catch (err) {
       if (err.code === '23505')
         return res.status(409).json({ error: 'El email ya está registrado' });
-      res.status(500).json({ error: err.message });
+      if (err.code === '23502')
+        return res.status(400).json({ error: `El campo '${err.column}' es obligatorio` });
+      res.status(500).json({ error: 'Error interno al crear usuario' });
     }
   });
 
@@ -134,7 +129,9 @@ module.exports = (pool) => {
     } catch (err) {
       if (err.code === '23505')
         return res.status(409).json({ error: 'El email ya está registrado' });
-      res.status(500).json({ error: err.message });
+      if (err.code === '23502')
+        return res.status(400).json({ error: `El campo '${err.column}' es obligatorio` });
+      res.status(500).json({ error: 'Error interno al actualizar usuario' });
     }
   });
 
@@ -160,28 +157,27 @@ module.exports = (pool) => {
 
       res.json({ mensaje: `Guardia ${result.rows[0].name} eliminado correctamente` });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: 'Error interno al eliminar usuario' });
     }
   });
 
-// PUT /usuarios/:id/fcm-token
-router.put('/:id/fcm-token', async (req, res) => {
-  const { id } = req.params;
-  const { fcm_token } = req.body;
+  router.put('/:id/fcm-token', async (req, res) => {
+    const { id } = req.params;
+    const { fcm_token } = req.body;
 
-  if (!fcm_token)
-    return res.status(400).json({ error: 'fcm_token requerido' });
+    if (!fcm_token)
+      return res.status(400).json({ error: 'fcm_token requerido' });
 
-  try {
-    await pool.query(
-      'UPDATE users SET fcm_token = $1 WHERE id = $2',
-      [fcm_token, id]
-    );
-    res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+    try {
+      await pool.query(
+        'UPDATE users SET fcm_token = $1 WHERE id = $2',
+        [fcm_token, id]
+      );
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: 'Error interno al actualizar token' });
+    }
+  });
 
   return router;
 };
