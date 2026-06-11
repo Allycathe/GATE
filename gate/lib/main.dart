@@ -63,7 +63,7 @@ class PantallaInicio extends StatelessWidget {
               backgroundColor: buttonColor,
               padding: EdgeInsets.all(16),
             ),
-              child: const Text("Iniciar Sesion", style: TextStyle(fontSize: 20),)
+              child: const Text("Iniciar sesión", style: TextStyle(fontSize: 20),)
             ), 
           ]),
         ));
