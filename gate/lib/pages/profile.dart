@@ -8,6 +8,7 @@ import '../custom_widgets/option_menu.dart';
 import '../custom_widgets/navbar.dart';
 import 'user_options.dart';
 
+String _nombreSupermarket = "";
 String rol = "";
 String definirRol(bool isAdmin) {
   return isAdmin ? "Encargado" : "Guardia";
@@ -24,6 +25,7 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     _initFCM();
+    loadSupermarketName();
   }
 
   Future<void> _initFCM() async {
@@ -49,6 +51,24 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       );
     });
+  }
+
+  Future<void> loadSupermarketName() async {
+    try {
+      final response = await http.get(
+        Uri.parse("$baseUrl/supermercados/$userSupermarketId"),
+        headers: {"Authorization": "Bearer $userToken"},
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print(data);
+        setState(() {
+          _nombreSupermarket = data["supermercado"]["name"] ?? "Sin nombre";
+        });
+      }
+    } catch (e) {
+      print("Error cargando supermercado: $e");
+    }
   }
 
   Future<void> _saveFcmToken(String token) async {
@@ -103,8 +123,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 style: const TextStyle(fontSize: 15)),
             const SizedBox(height: 30),
             Text("Rol: $rol", style: const TextStyle(fontSize: 20)),
-            Text("Local: $userSupermarketId",
-                style: const TextStyle(fontSize: 20)),
+            Text("Local: $_nombreSupermarket", style: const TextStyle(fontSize: 20)),
             const SizedBox(height: 20),
             FilledButton(
               onPressed: () {
