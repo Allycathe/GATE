@@ -18,16 +18,21 @@ class MapTheme {
 
   const MapTheme({required this.isDark});
 
-  Color get background => isDark ? const Color(0xFF0D1117) : const Color(0xFFF4F6FA);
+  Color get background =>
+      isDark ? const Color(0xFF0D1117) : const Color(0xFFF4F6FA);
   Color get surface => isDark ? const Color(0xFF161B22) : Colors.white;
-  Color get surfaceVariant => isDark ? const Color(0xFF1F2937) : const Color(0xFFF0F4FF);
+  Color get surfaceVariant =>
+      isDark ? const Color(0xFF1F2937) : const Color(0xFFF0F4FF);
   Color get primary => const Color(0xFF6366F1);
   Color get danger => const Color(0xFFEF4444);
   Color get warning => const Color(0xFFF59E0B);
   Color get success => const Color(0xFF10B981);
-  Color get textPrimary => isDark ? const Color(0xFFF0F6FC) : const Color(0xFF0D1117);
-  Color get textSecondary => isDark ? const Color(0xFF8B949E) : const Color(0xFF6B7280);
-  Color get border => isDark ? const Color(0xFF30363D) : const Color(0xFFE5E7EB);
+  Color get textPrimary =>
+      isDark ? const Color(0xFFF0F6FC) : const Color(0xFF0D1117);
+  Color get textSecondary =>
+      isDark ? const Color(0xFF8B949E) : const Color(0xFF6B7280);
+  Color get border =>
+      isDark ? const Color(0xFF30363D) : const Color(0xFFE5E7EB);
   Color get cardShadow => isDark ? Colors.black54 : Colors.black12;
   String get tileUrl => isDark
       ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
@@ -140,7 +145,9 @@ class _PulsingMarkerState extends State<PulsingMarker>
                       height: 38,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: widget.isDark ? const Color(0xFF1F2937) : Colors.white,
+                        color: widget.isDark
+                            ? const Color(0xFF1F2937)
+                            : Colors.white,
                         border: Border.all(color: widget.color, width: 2.5),
                         boxShadow: [
                           BoxShadow(
@@ -150,7 +157,8 @@ class _PulsingMarkerState extends State<PulsingMarker>
                           ),
                         ],
                       ),
-                      child: Icon(Icons.store_rounded, color: widget.color, size: 20),
+                      child: Icon(Icons.store_rounded,
+                          color: widget.color, size: 20),
                     ),
                     CustomPaint(
                       size: const Size(12, 8),
@@ -164,12 +172,15 @@ class _PulsingMarkerState extends State<PulsingMarker>
                     right: -4,
                     child: Container(
                       constraints: const BoxConstraints(minWidth: 20),
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 2),
                       decoration: BoxDecoration(
                         color: widget.color,
                         borderRadius: BorderRadius.circular(10),
                         boxShadow: [
-                          BoxShadow(color: widget.color.withOpacity(0.5), blurRadius: 6),
+                          BoxShadow(
+                              color: widget.color.withOpacity(0.5),
+                              blurRadius: 6),
                         ],
                       ),
                       child: Text(
@@ -186,14 +197,17 @@ class _PulsingMarkerState extends State<PulsingMarker>
                 Positioned(
                   bottom: -18,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: widget.isDark
                           ? const Color(0xFF1F2937).withOpacity(0.95)
                           : Colors.white.withOpacity(0.95),
                       borderRadius: BorderRadius.circular(6),
                       boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 4),
+                        BoxShadow(
+                            color: Colors.black.withOpacity(0.15),
+                            blurRadius: 4),
                       ],
                     ),
                     child: Text(
@@ -413,7 +427,8 @@ class _PantallaMapaState extends State<PantallaMapa>
     _headerSlide = Tween<Offset>(
       begin: const Offset(0, -1),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _headerController, curve: Curves.easeOut));
+    ).animate(
+        CurvedAnimation(parent: _headerController, curve: Curves.easeOut));
 
     _inicializar();
   }
@@ -507,7 +522,8 @@ class _PantallaMapaState extends State<PantallaMapa>
         backgroundColor: _theme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(titulo,
-            style: TextStyle(color: _theme.textPrimary, fontWeight: FontWeight.bold)),
+            style: TextStyle(
+                color: _theme.textPrimary, fontWeight: FontWeight.bold)),
         content: Text(mensaje, style: TextStyle(color: _theme.textSecondary)),
         actions: [
           TextButton(
@@ -535,8 +551,8 @@ class _PantallaMapaState extends State<PantallaMapa>
 
         setState(() {
           _supermercados = supermercadosJson.map((s) {
-            double lat = double.tryParse(s['location_y'].toString()) ?? 0.0;
-            double lng = double.tryParse(s['location_x'].toString()) ?? 0.0;
+            double lat = double.tryParse(s['latitude'].toString()) ?? 0.0;
+            double lng = double.tryParse(s['longitude'].toString()) ?? 0.0;
             return {
               'id': s['id'],
               'nombre': s['name'],
@@ -621,8 +637,9 @@ class _PantallaMapaState extends State<PantallaMapa>
 
   void _mostrarEstadisticas() {
     final total = _supermercados.length;
-    final conReportes =
-        _supermercados.where((s) => _filtrarReportes(s['id']).isNotEmpty).length;
+    final conReportes = _supermercados
+        .where((s) => _filtrarReportes(s['id']).isNotEmpty)
+        .length;
     final totalReportes = _historialCompletoReportes.length;
 
     HapticFeedback.lightImpact();
@@ -765,7 +782,8 @@ class _PantallaMapaState extends State<PantallaMapa>
       options: MapOptions(
         initialCenter: _ubicacionUsuario,
         initialZoom: _zoomLevel,
-        interactionOptions: const InteractionOptions(flags: InteractiveFlag.all),
+        interactionOptions:
+            const InteractionOptions(flags: InteractiveFlag.all),
         // Sincronizamos _zoomLevel cuando el usuario hace pinch/drag
         onMapEvent: (event) {
           if (event is MapEventMove || event is MapEventScrollWheelZoom) {
@@ -864,7 +882,8 @@ class _PantallaMapaState extends State<PantallaMapa>
                 color: _theme.primary.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(Icons.shield_rounded, color: _theme.primary, size: 18),
+              child:
+                  Icon(Icons.shield_rounded, color: _theme.primary, size: 18),
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -890,9 +909,8 @@ class _PantallaMapaState extends State<PantallaMapa>
 
             // ── SEARCH ───────────────────────────────────────────────────
             _HeaderBtn(
-              icon: _showSearch
-                  ? Icons.search_off_rounded
-                  : Icons.search_rounded,
+              icon:
+                  _showSearch ? Icons.search_off_rounded : Icons.search_rounded,
               theme: _theme,
               onTap: () => setState(() {
                 _showSearch = !_showSearch;
@@ -1445,7 +1463,8 @@ class _StatCard extends StatelessWidget {
               color: color,
             ),
           ),
-          Text(label, style: TextStyle(fontSize: 12, color: theme.textSecondary)),
+          Text(label,
+              style: TextStyle(fontSize: 12, color: theme.textSecondary)),
         ],
       ),
     );
@@ -1498,7 +1517,8 @@ class _ReportesSheet extends StatelessWidget {
                     color: theme.danger.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(Icons.store_rounded, color: theme.danger, size: 20),
+                  child:
+                      Icon(Icons.store_rounded, color: theme.danger, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1537,8 +1557,7 @@ class _ReportesSheet extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.check_circle_outline_rounded,
-                            size: 48,
-                            color: theme.success.withOpacity(0.5)),
+                            size: 48, color: theme.success.withOpacity(0.5)),
                         const SizedBox(height: 12),
                         Text(
                           'Sin reportes recientes',

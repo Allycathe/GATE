@@ -208,8 +208,8 @@ module.exports = (pool) => {
         SELECT r.id, r.nombre_sospechoso, r.description, r.date, r.id_supermarket,
                r.face_descriptor,
                s.name AS supermarket_name,
-               s.location_x,
-               s.location_y
+               s.latitude,
+               s.longitude
         FROM report r
         JOIN supermarket s ON r.id_supermarket = s.id
         WHERE r.id != $1 AND r.face_descriptor IS NOT NULL
@@ -230,8 +230,8 @@ module.exports = (pool) => {
           supermercado: {
             id: r.id_supermarket,
             nombre: r.supermarket_name,
-            location_x: r.location_x,
-            location_y: r.location_y,
+            latitude: r.latitude,
+            longitude: r.longitude,
           },
         })),
       });
@@ -279,8 +279,8 @@ module.exports = (pool) => {
           supermercado: {
             id: r.id_supermarket,
             nombre: r.supermarket_name,
-            location_x: r.location_x,
-            location_y: r.location_y,
+            latitude: r.latitude,
+            longitude: r.longitude,
           },
         })),
       });
