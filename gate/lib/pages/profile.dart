@@ -1,18 +1,16 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:gate/pages/encargado.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:gate/services/api_client.dart';
 import '../config.dart';
 import '../custom_widgets/option_menu.dart';
 import '../custom_widgets/navbar.dart';
 import 'user_options.dart';
 
-String _nombreSupermarket = "";
-String rol = "";
-String definirRol(bool isAdmin) {
-  return isAdmin ? "Encargado" : "Guardia";
-}
+String _nombreSupermarket = '';
+
+String definirRol(bool isAdmin) => isAdmin ? 'Encargado' : 'Guardia';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -25,71 +23,53 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     _initFCM();
-    loadSupermarketName();
+    _loadSupermarketName();
   }
 
   Future<void> _initFCM() async {
     final messaging = FirebaseMessaging.instance;
     await messaging.requestPermission();
-
-    // Obtener token del dispositivo y guardarlo en el backend
     final token = await messaging.getToken();
     if (token != null) await _saveFcmToken(token);
-
-    // Actualizar token si cambia (reinstalación, etc.)
     messaging.onTokenRefresh.listen(_saveFcmToken);
-
-    // Notificación con app en primer plano
     FirebaseMessaging.onMessage.listen((message) {
       final title = message.notification?.title ?? 'Alerta';
       final body = message.notification?.body ?? '';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$title: $body'),
-          backgroundColor: Colors.red[700],
-          duration: const Duration(seconds: 5),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$title: $body'),
+            backgroundColor: Colors.red[700],
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
     });
   }
 
-  Future<void> loadSupermarketName() async {
+  Future<void> _loadSupermarketName() async {
     try {
-      final response = await http.get(
-        Uri.parse("$baseUrl/supermercados/$userSupermarketId"),
-        headers: {"Authorization": "Bearer $userToken"},
-      );
+      final response = await ApiClient.get('/supermercados/$userSupermarketId');
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print(data);
-        setState(() {
-          _nombreSupermarket = data["supermercado"]["name"] ?? "Sin nombre";
-        });
+        if (mounted) {
+          setState(() {
+            _nombreSupermarket = data['supermercado']['name'] ?? 'Sin nombre';
+          });
+        }
       }
-    } catch (e) {
-      print("Error cargando supermercado: $e");
-    }
+    } catch (_) {}
   }
 
   Future<void> _saveFcmToken(String token) async {
     try {
-      await http.put(
-        Uri.parse('$baseUrl/usuarios/$userId/fcm-token'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $userToken',
-        },
-        body: jsonEncode({'fcm_token': token}),
-      );
-      print('✅ FCM token guardado');
-    } catch (e) {
-      print('❌ Error guardando FCM token: $e');
-    }
+      await ApiClient.put('/usuarios/$userId/fcm-token', {'fcm_token': token});
+    } catch (_) {}
   }
 
   @override
   Widget build(BuildContext context) {
-    rol = definirRol(userIsAdmin);
+    final rol = definirRol(userIsAdmin);
     return Scaffold(
       appBar: const CustomAppBar(),
       body: Center(
@@ -105,50 +85,55 @@ class _ProfilePageState extends State<ProfilePage> {
                   width: 200,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) {
-                    return Image.network(
-                      'https://i.pinimg.com/474x/c6/a9/a1/c6a9a1c3ec3b086dda8de521ffc46f61.jpg',
+                    return Container(
                       height: 200,
                       width: 200,
-                      fit: BoxFit.cover,
+                      color: interfaceColor,
+                      child: Center(
+                        child: Text(
+                          '${userName.isNotEmpty ? userName[0] : '?'}${userLastName.isNotEmpty ? userLastName[0] : ''}',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 60,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ),
                     );
                   },
                 ),
               ),
             ),
             const SizedBox(height: 40),
-            Text("$userName $userLastName",
+            Text('$userName $userLastName',
                 style:
                     const TextStyle(fontWeight: FontWeight.bold, fontSize: 30)),
-            Text("ID de usuario: $userId",
+            Text('ID de usuario: $userId',
                 style: const TextStyle(fontSize: 15)),
             const SizedBox(height: 30),
-            Text("Rol: $rol", style: const TextStyle(fontSize: 20)),
-            Text("Local: $_nombreSupermarket", style: const TextStyle(fontSize: 20)),
+            Text('Rol: $rol', style: const TextStyle(fontSize: 20)),
+            Text('Local: $_nombreSupermarket',
+                style: const TextStyle(fontSize: 20)),
             const SizedBox(height: 20),
             FilledButton(
-              onPressed: () {
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => UserOptions()));
-              },
+              onPressed: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const UserOptions())),
               style: FilledButton.styleFrom(
-                  backgroundColor: buttonColor, padding: EdgeInsets.all(16)),
-              child: const Text("Opciones"),
+                  backgroundColor: buttonColor, padding: const EdgeInsets.all(16)),
+              child: const Text('Opciones'),
             ),
             const SizedBox(height: 20),
             if (userIsAdmin)
               FilledButton(
-                onPressed: () {
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (context) => AdminPage()));
-                },
+                onPressed: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const AdminPage())),
                 style: FilledButton.styleFrom(
                     backgroundColor: adminInterfaceColor,
-                    padding: EdgeInsets.all(16)),
-                child: Text("Opciones de administrador",
+                    padding: const EdgeInsets.all(16)),
+                child: const Text('Opciones de administrador',
                     style: TextStyle(
                         color: Colors.black, fontWeight: FontWeight.bold)),
               ),
-            const Expanded(child: Text(" ")),
+            const Expanded(child: Text(' ')),
             const OptionContainer(),
           ],
         ),

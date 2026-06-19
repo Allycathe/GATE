@@ -1,66 +1,47 @@
 import 'package:flutter/material.dart';
 import 'package:gate/pages/mapa_screen.dart';
 import 'package:gate/pages/mis_reportes.dart';
-
+import 'package:gate/pages/report_detail.dart';
 import '../config.dart';
 import '../custom_widgets/option_menu.dart';
 import '../custom_widgets/navbar.dart';
 import '../services/report_service.dart';
+import '../utils.dart';
 
 class ReportsPage extends StatefulWidget {
   const ReportsPage({super.key});
 
   @override
-  State<ReportsPage> createState() {
-    return _ReportsPageState();
-  }
+  State<ReportsPage> createState() => _ReportsPageState();
 }
 
 class _ReportsPageState extends State<ReportsPage> {
-  bool cargando = true;
-  String? mensajeError;
-  List<dynamic> reportes = [];
+  bool _cargando = true;
+  String? _error;
+  List<dynamic> _reportes = [];
 
   @override
   void initState() {
     super.initState();
-    cargarReportes();
+    _cargar();
   }
 
-  Future<void> cargarReportes() async {
+  Future<void> _cargar() async {
+    setState(() {
+      _cargando = true;
+      _error = null;
+    });
     try {
       final data = await ReportService.listarReportes();
-
       setState(() {
-        reportes = data;
-        cargando = false;
-        mensajeError = null;
+        _reportes = data;
+        _cargando = false;
       });
-    } catch (error) {
+    } catch (e) {
       setState(() {
-        cargando = false;
-        mensajeError = error.toString();
+        _error = e.toString();
+        _cargando = false;
       });
-    }
-  }
-
-  String formatearFecha(String? fechaApi) {
-    if (fechaApi == null) {
-      return "Sin fecha";
-    }
-
-    try {
-      final fecha = DateTime.parse(fechaApi).toLocal();
-
-      final year = fecha.year.toString();
-      final month = fecha.month.toString().padLeft(2, "0");
-      final day = fecha.day.toString().padLeft(2, "0");
-      final hour = fecha.hour.toString().padLeft(2, "0");
-      final minute = fecha.minute.toString().padLeft(2, "0");
-
-      return "$year-$month-$day $hour:$minute";
-    } catch (error) {
-      return fechaApi;
     }
   }
 
@@ -68,185 +49,198 @@ class _ReportsPageState extends State<ReportsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const CustomAppBar(),
-      body: Center(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    const SizedBox(height: 20),
-                    FilledButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const PantallaMapa(),
-                                ),
-                              );
-                            },
-                            style: FilledButton.styleFrom(
-                              backgroundColor: buttonColor,
-                              padding: const EdgeInsets.all(16),
-                            ),
-                            child: const Text("Visualizar mapa"),
-                    ),
-                    SizedBox(height: 20),
-
-                    FilledButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const MisReportes(),
-                                ),
-                              );
-                            },
-                            style: FilledButton.styleFrom(
-                              backgroundColor: buttonColor,
-                              padding: const EdgeInsets.all(16),
-                            ),
-                            child: const Text("Ver mis reportes"),
-                    ),
-
-                    Divider(
-                      height: 40,
-                      thickness: 2,
-                      indent: 20,
-                      endIndent: 20,
-                      color: const Color.fromARGB(255, 68, 68, 68),
-                    ),
-
-                    const Center(
-                      child: Text(
-                        "Reportes recientes",
-                        style: titleTextStyle,
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const PantallaMapa()),
+                          ),
+                          icon: const Icon(Icons.map_outlined),
+                          label: const Text('Ver mapa'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: buttonColor,
+                            padding: const EdgeInsets.all(14),
+                          ),
+                        ),
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(20.0),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const MisReportes()),
+                          ),
+                          icon: const Icon(Icons.person_outline),
+                          label: const Text('Mis reportes'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: interfaceColor,
+                            padding: const EdgeInsets.all(14),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      const Text(
+                        'Reportes recientes',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.refresh),
+                        onPressed: _cargar,
+                        tooltip: 'Actualizar',
+                        color: interfaceColor,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (_cargando)
+                    const Center(
+                        child: Padding(
+                            padding: EdgeInsets.all(32),
+                            child: CircularProgressIndicator()))
+                  else if (_error != null)
+                    Center(
                       child: Column(
                         children: [
-                          
-                          const SizedBox(height: 20),
-                          FilledButton(
-                            onPressed: () {
-                              setState(() {
-                                cargando = true;
-                              });
-
-                              cargarReportes();
-                            },
+                          const Icon(Icons.error_outline,
+                              size: 48, color: Colors.red),
+                          const SizedBox(height: 8),
+                          Text('Error cargando reportes',
+                              style: TextStyle(color: Colors.grey[600])),
+                          const SizedBox(height: 12),
+                          FilledButton.icon(
+                            onPressed: _cargar,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Reintentar'),
                             style: FilledButton.styleFrom(
-                              backgroundColor: interfaceColor,
-                              padding: const EdgeInsets.all(16),
-                            ),
-                            child: const Text("Actualizar lista de reportes"),
+                                backgroundColor: interfaceColor),
                           ),
-                          const SizedBox(height: 20),
-                          if (cargando == true)
-                            const CircularProgressIndicator()
-                          else if (mensajeError != null)
-                            Text(
-                              "Error al cargar reportes:\n$mensajeError",
-                              style: const TextStyle(
-                                color: Colors.red,
-                              ),
-                            )
-                          else if (reportes.isEmpty)
-                            const Text(
-                              "No existen reportes registrados.",
-                              style: TextStyle(
-                                color: Colors.grey,
-                              ),
-                            )
-                          else
-                            ...reportes.map((reporte) {
-                              final id = reporte["id"];
-                              final nombreSospechoso = reporte["nombre_sospechoso"];
-                              final descripcion =
-                                  reporte["description"] ?? "Sin descripción";
-                              final fecha = formatearFecha(reporte["date"]);
-                              final idSupermarket = reporte["id_supermarket"];
-
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 12),
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: Colors.black),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              "ID del reporte: $id",
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                                "Persona reportada: $nombreSospechoso"),
-                                            Text(
-                                                "ID supermercado: $idSupermarket"),
-                                            Text("Fecha: $fecha"),
-                                            const SizedBox(height: 6),
-                                            Text(
-                                              "Descripción: $descripcion",
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Image.network(
-                                        '$baseUrl/reportes/$id/imagen',
-                                        height: 100,
-                                        width: 100,
-                                        fit: BoxFit.cover,
-                                        headers: {
-                                          'Authorization': 'Bearer $userToken',
-                                        },
-                                        errorBuilder:
-                                            (context, error, stackTrace) {
-                                          return const Icon(
-                                            Icons.report,
-                                            size: 80,
-                                            color: Colors.red,
-                                          );
-                                        },
-                                        loadingBuilder:
-                                            (context, child, loadingProgress) {
-                                          if (loadingProgress == null)
-                                            return child;
-                                          return const SizedBox(
-                                            height: 100,
-                                            width: 100,
-                                            child: Center(
-                                                child:
-                                                    CircularProgressIndicator()),
-                                          );
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            }),
                         ],
                       ),
-                    ),
-                  ],
-                ),
+                    )
+                  else if (_reportes.isEmpty)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Text('No hay reportes registrados.',
+                            style: TextStyle(color: Colors.grey)),
+                      ),
+                    )
+                  else
+                    ..._reportes.map((r) => _buildCard(r)),
+                ],
               ),
             ),
-            const OptionContainer(),
-          ],
+          ),
+          const OptionContainer(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCard(Map<String, dynamic> r) {
+    final id = r['id'];
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => ReportDetailPage(reporte: r)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Hero(
+                  tag: 'reporte_img_$id',
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      '$baseUrl/reportes/$id/imagen',
+                      height: 80,
+                      width: 80,
+                      fit: BoxFit.cover,
+                      headers: {'Authorization': 'Bearer $userToken'},
+                      errorBuilder: (_, __, ___) => Container(
+                        height: 80,
+                        width: 80,
+                        color: Colors.grey[200],
+                        child: const Icon(Icons.warning_amber,
+                            size: 36, color: Colors.grey),
+                      ),
+                      loadingBuilder: (_, child, progress) =>
+                          progress == null
+                              ? child
+                              : const SizedBox(
+                                  height: 80,
+                                  width: 80,
+                                  child: Center(
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2))),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        r['nombre_sospechoso'] ?? 'Sin nombre',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 15),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.calendar_today,
+                              size: 12, color: Colors.grey),
+                          const SizedBox(width: 4),
+                          Text(
+                            formatearFecha(r['date']),
+                            style: TextStyle(
+                                color: Colors.grey[600], fontSize: 12),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        r['description'] ?? 'Sin descripción',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right, color: Colors.grey),
+              ],
+            ),
+          ),
         ),
       ),
     );

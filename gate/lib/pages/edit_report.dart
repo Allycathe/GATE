@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:gate/config.dart';
-import 'package:gate/pages/encargado.dart';
 import 'package:gate/pages/mis_reportes.dart';
 import 'package:gate/services/report_service.dart';
 import 'package:http/http.dart' as http;

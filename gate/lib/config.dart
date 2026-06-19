@@ -1,18 +1,7 @@
-//import 'dart:ffi';
-
 import 'package:flutter/material.dart';
 
-// Configuracion de backend
-
-class AppConfig {
-  static const String baseUrl = 'https://gate.blade.dedyn.io';
-
-  static const String token =
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NiwiZW1haWwiOiJhZG1pbkBnYXRlLmNvbSIsImlhdCI6MTc3ODcxMjgzMiwiZXhwIjoxNzc4NzQxNjMyfQ.Qvs-Jigaf0ti1eXhChokmBiVeRP-0JddSHBivNHHqJE';
-}
-
 String baseUrl = 'https://gate.blade.dedyn.io';
-String userToken = AppConfig.token;
+String userToken = '';
 int userId = 0;
 int userSupermarketId = 0;
 String userEmail = "";
