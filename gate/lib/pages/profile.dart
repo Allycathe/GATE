@@ -162,7 +162,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                           child: ClipOval(
                             child: Image.asset(
-                              'assets/profile_pic.jpg',
+                              userIsAdmin ? 'assets/admin.png' : 'assets/guardia.jpg', // ✅
                               fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) => Container(
                                 color: interfaceColor,
@@ -179,6 +179,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                             ),
                           ),
+
                         ),
 
                         const SizedBox(height: 20),

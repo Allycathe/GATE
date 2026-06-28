@@ -108,7 +108,7 @@ class UserOptions extends StatelessWidget {
                           ),
                           child: ClipOval(
                             child: Image.asset(
-                              'assets/profile_pic.jpg',
+                              userIsAdmin ? 'assets/admin.png' : 'assets/guardia.jpg', // ✅
                               fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) => Container(
                                 color: interfaceColor,
@@ -148,16 +148,6 @@ class UserOptions extends StatelessWidget {
 
                         const SizedBox(height: 36),
 
-                        _sectionLabel("Cuenta"),
-                        const SizedBox(height: 10),
-
-                        _optionTile(
-                          icon: Icons.photo_camera_outlined,
-                          label: "Cambiar foto de perfil",
-                          onTap: () {},
-                        ),
-
-                        const SizedBox(height: 32),
 
                         _sectionLabel("Sesión"),
                         const SizedBox(height: 10),
