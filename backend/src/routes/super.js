@@ -28,14 +28,14 @@ module.exports = (pool) => {
 
   // ADMIN - Crear, editar, eliminar
   router.post('/', isAdmin(pool), async (req, res) => {
-    const { name, location_x, location_y } = req.body;
-    if (!name || location_x === undefined || location_y === undefined) {
-      return res.status(400).json({ error: 'Faltan campos obligatorios (name, location_x, location_y)' });
+    const { name, latitude, longitude } = req.body;
+    if (!name || latitude === undefined || longitude === undefined) {
+    return res.status(400).json({ error: 'Faltan campos obligatorios (name, latitude, longitude)' });
     }
     try {
       const result = await pool.query(
-        'INSERT INTO supermarket (name, location_x, location_y) VALUES ($1, $2, $3) RETURNING *',
-        [name, location_x, location_y]
+        'INSERT INTO supermarket (name, latitude, longitude) VALUES ($1, $2, $3) RETURNING *',
+[name, latitude, longitude]
       );
       res.status(201).json({ mensaje: 'Supermercado creado', supermercado: result.rows[0] });
     } catch (err) {
@@ -45,11 +45,11 @@ module.exports = (pool) => {
 
   router.put('/:id', isAdmin(pool), async (req, res) => {
     const { id } = req.params;
-    const { name, location_x, location_y } = req.body;
+    const { name, latitude, longitude } = req.body;
     try {
       const result = await pool.query(
-        'UPDATE supermarket SET name=$1, location_x=$2, location_y=$3 WHERE id=$4 RETURNING *',
-        [name, location_x, location_y, id]
+        'UPDATE supermarket SET name=$1, latitude=$2, longitude=$3 WHERE id=$4 RETURNING *',
+[name, latitude, longitude, id]
       );
       if (result.rowCount === 0) return res.status(404).json({ error: 'Supermercado no encontrado' });
       res.json({ mensaje: 'Supermercado actualizado', supermercado: result.rows[0] });
