@@ -686,9 +686,14 @@ class _PantallaMapaState extends State<PantallaMapa>
               _cargando ? _buildLoadingView() : _buildMap(),
 
               // HEADER
-              SlideTransition(
-                position: _headerSlide,
-                child: _buildHeader(),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: SlideTransition(
+                  position: _headerSlide,
+                  child: _buildHeader(), // el contenido sin el Positioned
+                ),
               ),
 
               // SEARCH BAR
@@ -833,11 +838,7 @@ class _PantallaMapaState extends State<PantallaMapa>
   }
 
   Widget _buildHeader() {
-    return Positioned(
-      top: 0,
-      left: 0,
-      right: 0,
-      child: Container(
+    return Container(
         margin: const EdgeInsets.all(12),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
@@ -959,8 +960,7 @@ class _PantallaMapaState extends State<PantallaMapa>
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildSearchBar() {
