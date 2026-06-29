@@ -3,6 +3,8 @@ import '../config.dart';
 import '../routes.dart';
 import '../utils.dart';
 import 'edit_report.dart';
+import '../services/report_service.dart';
+
 
 class ReportDetailPage extends StatefulWidget {
   final Map<String, dynamic> reporte;
@@ -19,12 +21,19 @@ class ReportDetailPage extends StatefulWidget {
 }
 
 class _ReportDetailPageState extends State<ReportDetailPage>
+
     with SingleTickerProviderStateMixin {
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
   bool _editado = false;
   bool _descripcionExpandida = false;
+
+  List<dynamic> _similares = [];
+  bool _cargandoSimilares = true;
+  String? _errorSimilares;
+
+  
 
   @override
   void initState() {
@@ -39,6 +48,24 @@ class _ReportDetailPageState extends State<ReportDetailPage>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic));
     _animController.forward();
+    _cargarSimilares();
+  }
+
+  Future<void> _cargarSimilares() async {
+    try {
+      final data = await ReportService.buscarSimilares(widget.reporte['id']);
+      if (mounted) setState(() {
+        _similares = data;
+        _cargandoSimilares = false;
+      });
+    } catch (e) {
+      if (mounted) setState(() {
+        _errorSimilares = e.toString().contains('sin_rostro')
+            ? 'Sin descriptor facial'
+            : 'No se pudieron cargar';
+        _cargandoSimilares = false;
+      });
+    }
   }
 
   @override
@@ -236,6 +263,170 @@ class _ReportDetailPageState extends State<ReportDetailPage>
                                 ],
                               ),
                             ),
+                            const SizedBox(height: 28),
+
+                            // Título sección
+                            Row(
+                              children: [
+                                const Icon(Icons.face_retouching_natural,
+                                    color: Colors.white38, size: 18),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Rostros similares',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const Spacer(),
+                                if (!_cargandoSimilares && _similares.isNotEmpty)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: interfaceColor.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      '${_similares.length}',
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.8),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 14),
+
+                            // Contenido similares
+                            if (_cargandoSimilares)
+                              const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 24),
+                                  child: CircularProgressIndicator(
+                                      color: Colors.white38, strokeWidth: 2),
+                                ),
+                              )
+                            else if (_errorSimilares != null)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.face_retouching_off,
+                                        color: Colors.white24, size: 20),
+                                    const SizedBox(width: 10),
+                                    Text(_errorSimilares!,
+                                        style: const TextStyle(
+                                            color: Colors.white38, fontSize: 13)),
+                                  ],
+                                ),
+                              )
+                            else if (_similares.isEmpty)
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.check_circle_outline,
+                                        color: Colors.white24, size: 20),
+                                    SizedBox(width: 10),
+                                    Text('No se encontraron rostros similares',
+                                        style: TextStyle(
+                                            color: Colors.white38, fontSize: 13)),
+                                  ],
+                                ),
+                              )
+                            else
+                              // Lista horizontal de cards
+                              SizedBox(
+                                height: 160,
+                                child: ListView.separated(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: _similares.length,
+                                  separatorBuilder: (_, __) => const SizedBox(width: 10),
+                                  itemBuilder: (context, i) {
+                                    final s = _similares[i];
+                                    final esAlta = s['confianza'] == 'alta';
+                                    return Container(
+                                      width: 120,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.07),
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(
+                                          color: esAlta
+                                              ? Colors.redAccent.withOpacity(0.4)
+                                              : Colors.white.withOpacity(0.1),
+                                        ),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          // Imagen
+                                          ClipRRect(
+                                            borderRadius: const BorderRadius.vertical(
+                                                top: Radius.circular(14)),
+                                            child: Image.network(
+                                              '$baseUrl/reportes/${s['id']}/imagen',
+                                              width: 120,
+                                              height: 90,
+                                              fit: BoxFit.cover,
+                                              headers: {'Authorization': 'Bearer $userToken'},
+                                              errorBuilder: (_, __, ___) => Container(
+                                                width: 120,
+                                                height: 90,
+                                                color: Colors.white10,
+                                                child: const Icon(Icons.person,
+                                                    color: Colors.white24, size: 32),
+                                              ),
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  s['nombre_sospechoso'] ?? 'Desconocido',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(
+                                                      horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: esAlta
+                                                        ? Colors.redAccent.withOpacity(0.2)
+                                                        : Colors.orange.withOpacity(0.2),
+                                                    borderRadius: BorderRadius.circular(6),
+                                                  ),
+                                                  child: Text(
+                                                    esAlta ? '🔴 Alta' : '🟡 Media',
+                                                    style: TextStyle(
+                                                      fontSize: 9,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: esAlta
+                                                          ? Colors.redAccent
+                                                          : Colors.orange,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
 
                             if (widget.puedeEditar) ...[
                               const SizedBox(height: 28),

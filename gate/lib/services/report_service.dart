@@ -1,7 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:http/http.dart' as http;
+
 import '../config.dart';
 import 'api_client.dart';
+
 
 class ReportService {
   static Future<List<dynamic>> listarReportes() async {
@@ -10,6 +13,27 @@ class ReportService {
       return jsonDecode(response.body);
     } else {
       throw Exception('Error al listar reportes: ${response.statusCode}');
+    }
+  }
+
+  static Future<List<dynamic>> buscarSimilares(int idReporte) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/reportes/$idReporte/similares'),
+        headers: {'Authorization': 'Bearer $userToken'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['similares'] ?? [];  // ← el ?? [] es clave
+      } else if (response.statusCode == 422) {
+        throw Exception('sin_rostro');
+      } else {
+        return [];  // ← en vez de throw, retorna lista vacía
+      }
+    } catch (e) {
+      if (e.toString().contains('sin_rostro')) rethrow;
+      return [];  // ← cualquier otro error de red, lista vacía
     }
   }
 
