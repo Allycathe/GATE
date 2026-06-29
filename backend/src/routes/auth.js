@@ -22,6 +22,10 @@ module.exports = (pool) => {
       if (!passwordValida) {
         return res.status(401).json({ error: 'Credenciales incorrectas' });
       }
+      await pool.query(
+      'UPDATE users SET fcm_token = NULL WHERE id != $1',
+      [usuario.id]
+        );
       const token = jwt.sign(
         { id: usuario.id, email: usuario.email },
         process.env.JWT_SECRET || 'secret_key_provisional',

@@ -41,7 +41,7 @@ async function startListener() {
 async function notifyNearbyUsers(alerta) {
   // 1. Coordenadas del supermercado centro de la alerta
   const centerResult = await pool.query(
-    'SELECT location_x AS lat, location_y AS lon FROM supermarket WHERE id = $1',
+    'SELECT latitude AS lat, longitude AS lon FROM supermarket WHERE id = $1',
     [alerta.center_supermarket_id]
   );
   if (centerResult.rowCount === 0) return;
@@ -49,7 +49,7 @@ async function notifyNearbyUsers(alerta) {
 
   // 2. Todos los supermercados con sus coordenadas
   const allSm = await pool.query(
-    'SELECT id, location_x AS lat, location_y AS lon FROM supermarket'
+    'SELECT id, latitude AS lat, longitude AS lon FROM supermarket'
   );
 
   // 3. Filtrar supermercados dentro del radio

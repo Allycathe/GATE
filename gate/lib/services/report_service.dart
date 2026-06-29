@@ -1,24 +1,39 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import '../config.dart';
 
-// Actualizado a nombre_sospechoso en tabla reports
+import '../config.dart';
+import 'api_client.dart';
+
 
 class ReportService {
   static Future<List<dynamic>> listarReportes() async {
-    final url = Uri.parse('$baseUrl/reportes');
-    final response = await http.get(
-      url,
-      headers: {
-        'Authorization': 'Bearer $userToken',
-      },
-    );
+    final response = await ApiClient.get('/reportes');
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
-      throw Exception(
-          'Error al listar reportes: ${response.statusCode} - ${response.body}');
+      throw Exception('Error al listar reportes: ${response.statusCode}');
+    }
+  }
+
+  static Future<List<dynamic>> buscarSimilares(int idReporte) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/reportes/$idReporte/similares'),
+        headers: {'Authorization': 'Bearer $userToken'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['similares'] ?? [];  // ← el ?? [] es clave
+      } else if (response.statusCode == 422) {
+        throw Exception('sin_rostro');
+      } else {
+        return [];  // ← en vez de throw, retorna lista vacía
+      }
+    } catch (e) {
+      if (e.toString().contains('sin_rostro')) rethrow;
+      return [];  // ← cualquier otro error de red, lista vacía
     }
   }
 
@@ -29,22 +44,15 @@ class ReportService {
     required int idReporter,
     File? imagen,
   }) async {
-    final url = Uri.parse('$baseUrl/reportes');
-
-    // Convertir imagen a base64 si existe
     String? imagenBase64;
     if (imagen != null) {
       final bytes = await imagen.readAsBytes();
       imagenBase64 = 'data:image/jpeg;base64,${base64Encode(bytes)}';
     }
 
-    final response = await http.post(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $userToken',
-      },
-      body: jsonEncode({
+    final response = await ApiClient.post(
+      '/reportes',
+      jsonEncode({
         'nombre_sospechoso': nombreSospechoso,
         'description': description,
         'id_supermarket': idSupermarket,
@@ -56,8 +64,7 @@ class ReportService {
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body);
     } else {
-      throw Exception(
-          'Error al crear reporte: ${response.statusCode} - ${response.body}');
+      throw Exception('Error al crear reporte: ${response.statusCode}');
     }
   }
 
@@ -67,27 +74,19 @@ class ReportService {
     required String description,
     required int idSupermarket,
     File? imagen,
-    String? imagenUrlActual, // Se reenvía si no se cambia la imagen
+    String? imagenUrlActual,
   }) async {
-    final url = Uri.parse('$baseUrl/reportes/$id');
-
     String? imagenFinal;
     if (imagen != null) {
-      // Nueva imagen seleccionada → convertir a base64
       final bytes = await imagen.readAsBytes();
       imagenFinal = 'data:image/jpeg;base64,${base64Encode(bytes)}';
     } else if (imagenUrlActual != null) {
-      // Sin cambios → reenviar la URL/base64 que ya tenía
       imagenFinal = imagenUrlActual;
     }
 
-    final response = await http.put(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $userToken',
-      },
-      body: jsonEncode({
+    final response = await ApiClient.put(
+      '/reportes/$id',
+      jsonEncode({
         'nombre_sospechoso': nombreSospechoso,
         'description': description,
         'id_supermarket': idSupermarket,
@@ -98,22 +97,23 @@ class ReportService {
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
-      throw Exception(
-          'Error al actualizar reporte: ${response.statusCode} - ${response.body}');
+      throw Exception('Error al actualizar reporte: ${response.statusCode}');
     }
   }
 
+  static Future<Map<int, String>> listarSupermercados() async {
+    final response = await ApiClient.get('/supermercados');
+    if (response.statusCode == 200) {
+      final lista = jsonDecode(response.body) as List;
+      return {for (var s in lista) s['id'] as int: s['name'] as String};
+    }
+    return {};
+  }
+
   static Future<void> eliminarReporte(int id) async {
-    final url = Uri.parse('$baseUrl/reportes/$id');
-    final response = await http.delete(
-      url,
-      headers: {
-        'Authorization': 'Bearer $userToken',
-      },
-    );
+    final response = await ApiClient.delete('/reportes/$id');
     if (response.statusCode != 200 && response.statusCode != 204) {
-      throw Exception(
-          'Error al eliminar reporte: ${response.statusCode} - ${response.body}');
+      throw Exception('Error al eliminar reporte: ${response.statusCode}');
     }
   }
 }

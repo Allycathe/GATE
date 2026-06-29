@@ -1,363 +1,561 @@
 import 'package:flutter/material.dart';
-import '/custom_widgets/navbar.dart';
 import '../config.dart';
 import '../services/report_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
-String rol = "";
-
-void definirRol(bool isAdmin) {
-  if (isAdmin) {
-    rol = "Encargado";
-  } else {
-    rol = "Guardia";
-  }
-}
-
 class NewReport extends StatefulWidget {
   const NewReport({super.key});
   @override
-  State<NewReport> createState() {
-    return _ReportPageState();
-  }
+  State<NewReport> createState() => _ReportPageState();
 }
 
 class _ReportPageState extends State<NewReport> {
   final _formKey = GlobalKey<FormState>();
-  final nombreController = TextEditingController();
-
-  // Variables de imagen (ahora dentro del state)
-  File? _imagenSeleccionada;
+  final _nombreController = TextEditingController();
+  final _descripcionController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
 
-  final String nombreUsuario = ""; // Borrar los hardcodeados
-  final String supermercadoUsuario = "";
-  final String rolUsuario = "Guardia";
-
-  String descripcion = "";
-  bool noExisteNombre = false;
-
-  final List<Map<String, String>> reportes = [
-
-  ];
+  File? _imagenSeleccionada;
+  bool _noExisteNombre = false;
+  bool _enviando = false;
 
   String obtenerFechaActual() {
-    final fecha = DateTime.now();
-    final year = fecha.year.toString();
-    final month = fecha.month.toString().padLeft(2, "0");
-    final day = fecha.day.toString().padLeft(2, "0");
-    final hour = fecha.hour.toString().padLeft(2, "0");
-    final minute = fecha.minute.toString().padLeft(2, "0");
-    return "$year-$month-$day $hour:$minute";
+    final f = DateTime.now();
+    return "${f.year}-${f.month.toString().padLeft(2, '0')}-${f.day.toString().padLeft(2, '0')} "
+        "${f.hour.toString().padLeft(2, '0')}:${f.minute.toString().padLeft(2, '0')}";
   }
 
-  Future<void> seleccionarImagen(ImageSource fuente) async {
-    final XFile? imagen = await _picker.pickImage(
-      source: fuente,
-      imageQuality: 80,
-    );
-
+  Future<void> _seleccionarImagen(ImageSource fuente) async {
+    final XFile? imagen =
+        await _picker.pickImage(source: fuente, imageQuality: 80);
     if (imagen != null) {
-      setState(() {
-        _imagenSeleccionada = File(imagen.path);
-      });
+      setState(() => _imagenSeleccionada = File(imagen.path));
     }
   }
 
-  Future<void> guardarReporte() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
+  Future<void> _guardarReporte() async {
+    if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
 
-    String nombreFinal = "";
+    setState(() => _enviando = true);
 
-    if (noExisteNombre == true) {
-      nombreFinal = "Persona no identificada";
-    } else {
-      nombreFinal = nombreController.text.trim();
-    }
-
-    final descripcionFinal = descripcion; // Quitar nombre de la descripcion
+    final nombreFinal = _noExisteNombre
+        ? "Persona no identificada"
+        : _nombreController.text.trim();
 
     try {
       await ReportService.crearReporte(
         nombreSospechoso: nombreFinal,
-        description: descripcionFinal,
-        idSupermarket: 1,
-        imagen: _imagenSeleccionada, // <-- imagen opcional
+        description: _descripcionController.text.trim(),
+        idSupermarket: userSupermarketId,
+        imagen: _imagenSeleccionada,
         idReporter: userId,
       );
 
-      final nuevoReporte = {
-        "persona": nombreFinal,
-        "supermercado": userSupermarketId.toString(),
-        "reportadoPor": userName.toString(),
-        "fecha": obtenerFechaActual(),
-        "descripcion": descripcion.toString(),
-      };
-
       setState(() {
-        reportes.insert(0, nuevoReporte);
-        noExisteNombre = false;
-        nombreController.clear();
-        _imagenSeleccionada = null; // limpiar imagen tras enviar
+        _noExisteNombre = false;
+        _nombreController.clear();
+        _descripcionController.clear();
+        _imagenSeleccionada = null;
       });
-
       _formKey.currentState!.reset();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Reporte enviado correctamente")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle_outline, color: Colors.white),
+                SizedBox(width: 10),
+                Text("Reporte enviado correctamente"),
+              ],
+            ),
+            backgroundColor: const Color(0xFF10B981),
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+        Navigator.pop(context);
+      }
     } catch (error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error al enviar reporte: $error")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error al enviar reporte: $error"),
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _enviando = false);
     }
   }
 
   @override
   void dispose() {
-    nombreController.dispose();
+    _nombreController.dispose();
+    _descripcionController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const CustomAppBar(),
-      body: ListView(
-        padding: const EdgeInsets.all(18),
+      body: Stack(
         children: [
-          const Text(
-            "Nuevo reporte",
-            style: titleTextStyle,
-          ),
-          const SizedBox(height: 20),
+          // Fondo
           Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: interfaceColor,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Text(
-              "Usuario: $userName\n"
-              "Sucursal: $userSupermarketId\n"
-              "Rol: $rolUsuario",
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                height: 1.5,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF0D1B3E),
+                  Color(0xFF1A3A6B),
+                  Color(0xFF0D1B3E),
+                ],
+                stops: [0.0, 0.5, 1.0],
               ),
             ),
           ),
-          const SizedBox(height: 25),
-          Form(
-            key: _formKey,
+
+          SafeArea(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "Persona reportada",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-
-                const SizedBox(height: 6),
-
-                TextFormField(
-                  controller: nombreController,
-                  enabled: !noExisteNombre,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    hintText: "Ingrese el nombre de la persona",
-                  ),
-                  validator: (value) {
-                    if (noExisteNombre == true) return null;
-                    if (value == null || value.trim().isEmpty) {
-                      return "Debe ingresar un nombre o marcar que no existe";
-                    }
-                    return null;
-                  },
-                ),
-
-                CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text("No existe nombre"),
-                  value: noExisteNombre,
-                  onChanged: (value) {
-                    setState(() {
-                      noExisteNombre = value!;
-                      if (noExisteNombre == true) {
-                        nombreController.clear();
-                      }
-                    });
-                  },
-                ),
-
-                if (noExisteNombre == true)
-                  const Text(
-                    "El reporte se guardará como: Persona no identificada",
-                    style: TextStyle(color: Colors.grey),
-                  ),
-
-                const SizedBox(height: 18),
-
-                const Text(
-                  "Descripción del incidente",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-
-                const SizedBox(height: 6),
-
-                TextFormField(
-                  maxLines: 5,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    hintText: "Ej: Persona observada ocultando productos...",
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return "Debe ingresar una descripción";
-                    }
-                    if (value.trim().length < 10) {
-                      return "La descripción es demasiado corta";
-                    }
-                    return null;
-                  },
-                  onSaved: (value) {
-                    descripcion = value!.trim();
-                  },
-                ),
-
-                const SizedBox(height: 18),
-
-                const Text(
-                  "Imagen o evidencia",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-
-                const SizedBox(height: 6),
-
-                // Botones de cámara y galería
-                Row(
-                  children: [
-                    FilledButton.icon(
-                      onPressed: () => seleccionarImagen(ImageSource.camera),
-                      icon: const Icon(Icons.camera_alt),
-                      label: const Text("Cámara"),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: buttonColor,
-                        padding: const EdgeInsets.all(14),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    FilledButton.icon(
-                      onPressed: () => seleccionarImagen(ImageSource.gallery),
-                      icon: const Icon(Icons.photo_library),
-                      label: const Text("Galería"),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: buttonColor,
-                        padding: const EdgeInsets.all(14),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 10),
-
-                // Preview de la imagen seleccionada
-                if (_imagenSeleccionada != null)
-                  Stack(
+                // Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 12, 24, 0),
+                  child: Row(
                     children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.file(
-                          _imagenSeleccionada!,
-                          height: 180,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                        ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                            color: Colors.white70, size: 20),
                       ),
-                      Positioned(
-                        top: 6,
-                        right: 6,
-                        child: GestureDetector(
-                          onTap: () =>
-                              setState(() => _imagenSeleccionada = null),
-                          child: Container(
-                            decoration: const BoxDecoration(
-                              color: Colors.black54,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.close,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                          ),
+                      const Text(
+                        "Nuevo reporte",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
+                ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 4),
 
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: guardarReporte,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: interfaceColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.all(14),
-                    ),
-                    child: const Text(
-                      "Enviar reporte",
-                      style: TextStyle(fontSize: 16),
-                    ),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+                    children: [
+                      // Info del usuario
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: interfaceColor.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                              color: interfaceColor.withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.person_outline,
+                                color: Colors.white54, size: 18),
+                            const SizedBox(width: 10),
+                            Text(
+                              "$userName $userLastName",
+                              style: const TextStyle(
+                                  color: Colors.white70, fontSize: 14),
+                            ),
+                            const Spacer(),
+                            const Icon(Icons.store_outlined,
+                                color: Colors.white54, size: 18),
+                            const SizedBox(width: 6),
+                            Text(
+                              "Local $userSupermarketId",
+                              style: const TextStyle(
+                                  color: Colors.white70, fontSize: 14),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Nombre
+                            _sectionLabel("Persona reportada"),
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: _nombreController,
+                              enabled: !_noExisteNombre,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: _inputDecoration(
+                                hint: "Nombre del sospechoso",
+                                icon: Icons.person_search_outlined,
+                              ),
+                              validator: (value) {
+                                if (_noExisteNombre) return null;
+                                if (value == null || value.trim().isEmpty) {
+                                  return "Ingresa un nombre o marca 'No identificado'";
+                                }
+                                return null;
+                              },
+                            ),
+
+                            const SizedBox(height: 10),
+
+                            // Checkbox no identificado
+                            InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _noExisteNombre = !_noExisteNombre;
+                                  if (_noExisteNombre) _nombreController.clear();
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: _noExisteNombre
+                                      ? Colors.white.withOpacity(0.1)
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: _noExisteNombre
+                                        ? Colors.white.withOpacity(0.3)
+                                        : Colors.white.withOpacity(0.1),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Checkbox(
+                                      value: _noExisteNombre,
+                                      onChanged: (val) {
+                                        setState(() {
+                                          _noExisteNombre = val ?? false;
+                                          if (_noExisteNombre) _nombreController.clear();
+                                        });
+                                      },
+                                      activeColor: interfaceColor,
+                                      checkColor: Colors.white,
+                                      side: BorderSide(color: Colors.white38),
+                                      visualDensity: VisualDensity.compact,
+                                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      _noExisteNombre
+                                          ? "Se guardará como: Persona no identificada"
+                                          : "Persona no identificada",
+                                      style: TextStyle(
+                                        color: _noExisteNombre
+                                            ? Colors.white70
+                                            : Colors.white38,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 24),
+
+                            // Descripción
+                            _sectionLabel("Descripción del incidente"),
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: _descripcionController,
+                              maxLines: 4,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: _inputDecoration(
+                                hint:
+                                    "Ej: Persona observada ocultando productos en su ropa...",
+                                icon: Icons.description_outlined,
+                                alignLabelWithHint: true,
+                              ),
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return "Ingresa una descripción";
+                                }
+                                if (value.trim().length < 10) {
+                                  return "La descripción es demasiado corta";
+                                }
+                                return null;
+                              },
+                            ),
+
+                            const SizedBox(height: 24),
+
+                            // Imagen
+                            _sectionLabel("Evidencia fotográfica"),
+                            const SizedBox(height: 8),
+
+                            if (_imagenSeleccionada == null)
+                              // Zona de selección
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _imageButton(
+                                      icon: Icons.camera_alt_outlined,
+                                      label: "Cámara",
+                                      onTap: () => _seleccionarImagen(
+                                          ImageSource.camera),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _imageButton(
+                                      icon: Icons.photo_library_outlined,
+                                      label: "Galería",
+                                      onTap: () => _seleccionarImagen(
+                                          ImageSource.gallery),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            else
+                              // Preview imagen
+                              Stack(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Image.file(
+                                      _imagenSeleccionada!,
+                                      height: 200,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                  // Overlay oscuro abajo
+                                  Positioned(
+                                    bottom: 0,
+                                    left: 0,
+                                    right: 0,
+                                    child: Container(
+                                      height: 60,
+                                      decoration: BoxDecoration(
+                                        borderRadius: const BorderRadius.only(
+                                          bottomLeft: Radius.circular(16),
+                                          bottomRight: Radius.circular(16),
+                                        ),
+                                        gradient: LinearGradient(
+                                          begin: Alignment.bottomCenter,
+                                          end: Alignment.topCenter,
+                                          colors: [
+                                            Colors.black.withOpacity(0.6),
+                                            Colors.transparent,
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  // Botón quitar
+                                  Positioned(
+                                    top: 8,
+                                    right: 8,
+                                    child: GestureDetector(
+                                      onTap: () => setState(
+                                          () => _imagenSeleccionada = null),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.6),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(Icons.close,
+                                            color: Colors.white, size: 18),
+                                      ),
+                                    ),
+                                  ),
+                                  // Botón cambiar
+                                  Positioned(
+                                    bottom: 10,
+                                    right: 12,
+                                    child: GestureDetector(
+                                      onTap: () => _seleccionarImagen(
+                                          ImageSource.gallery),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.5),
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.edit_outlined,
+                                                color: Colors.white, size: 14),
+                                            SizedBox(width: 4),
+                                            Text("Cambiar",
+                                                style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 12)),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                            const SizedBox(height: 32),
+
+                            // Botón enviar
+                            SizedBox(
+                              width: double.infinity,
+                              height: 54,
+                              child: ElevatedButton(
+                                onPressed: _enviando ? null : _guardarReporte,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: interfaceColor,
+                                  foregroundColor: Colors.white,
+                                  disabledBackgroundColor:
+                                      interfaceColor.withOpacity(0.4),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                ),
+                                child: _enviando
+                                    ? const SizedBox(
+                                        height: 22,
+                                        width: 22,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2.5,
+                                        ),
+                                      )
+                                    : const Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.send_rounded, size: 18),
+                                          SizedBox(width: 8),
+                                          Text(
+                                            "Enviar reporte",
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 35),
-          const Text(
-            "Reportes recientes",
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          if (reportes.isEmpty)
-            const Text(
-              "No existen reportes recientes.",
-              style: TextStyle(color: Colors.grey),
-            )
-          else
-            ...reportes.map((reporte) {
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: ListTile(
-                  title: Text(
-                    reporte["persona"]!,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(
-                    "Sucursal: ${reporte["supermercado"]}\n"
-                    "Reportado por: ${reporte["reportadoPor"]}\n"
-                    "Fecha: ${reporte["fecha"]}\n"
-                    "Descripción: ${reporte["descripcion"]}",
-                    //"Nombre del sospechoso: " ${reporte["nombre"]}, // VER
-                  ),
-                ),
-              );
-            }),
         ],
       ),
+    );
+  }
+
+  Widget _sectionLabel(String text) {
+    return Text(
+      text,
+      style: TextStyle(
+        color: Colors.white.withOpacity(0.75),
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.3,
+      ),
+    );
+  }
+
+  Widget _imageButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.07),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withOpacity(0.12)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: Colors.white54, size: 28),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.6),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration({
+    required String hint,
+    required IconData icon,
+    bool alignLabelWithHint = false,
+  }) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle:
+          TextStyle(color: Colors.white.withOpacity(0.25), fontSize: 14),
+      prefixIcon: Padding(
+        padding: EdgeInsets.only(bottom: alignLabelWithHint ? 60 : 0),
+        child: Icon(icon, color: Colors.white38, size: 20),
+      ),
+      filled: true,
+      fillColor: Colors.white.withOpacity(0.08),
+      alignLabelWithHint: alignLabelWithHint,
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: interfaceColor, width: 1.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFFEF4444)),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
+      ),
+      errorStyle: const TextStyle(color: Color(0xFFEF4444)),
     );
   }
 }
