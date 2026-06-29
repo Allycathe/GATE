@@ -149,7 +149,7 @@ module.exports = (pool) => {
   });
 
   // 5. ELIMINAR UN REPORTE - solo admin
-  router.delete('/:id', auth, isAdmin(pool), async (req, res) => {
+  router.delete('/:id', auth, async (req, res) => {
     const { id } = req.params;
     try {
       const result = await pool.query('DELETE FROM report WHERE id = $1 RETURNING *', [id]);
